@@ -1,0 +1,269 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  BLOCKED
+}
+
+enum PointTransactionType {
+  CREDIT
+  DEBIT
+}
+
+enum MarketType {
+  ONE_X_TWO
+  HALF_TIME_ONE_X_TWO
+  HALF_TIME_FULL_TIME
+  EXACT_SCORE
+  OVER_UNDER_1_5
+  OVER_UNDER_2_5
+  OVER_UNDER_3_5
+  OVER_UNDER_4_5
+  OVER_UNDER_5_5
+  BOTH_TEAMS_TO_SCORE
+  DOUBLE_CHANCE
+  /** K.-o.: wer erreicht die nächste Runde (Outcome „1“ / „2“) */
+  TO_QUALIFY
+  /** Gesamtkarten (0–8 Zeilen × Unter / Exakt / Über) */
+  CARDS_MATRIX
+  /** Gesamtecken (0–8 Zeilen × Unter / Exakt / Über) */
+  CORNERS_MATRIX
+}
+
+enum BetStatus {
+  OPEN
+  WON
+  LOST
+  VOID
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  username            String?              @unique
+  name                String
+  avatarUrl           String?
+  passwordHash        String
+  role                UserRole             @default(USER)
+  status              UserStatus           @default(ACTIVE)
+  emailVerified       Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  wallet              Wallet?
+  pointTransactions   PointTransaction[]
+  passwordResetTokens PasswordResetToken[]
+  createdMatches      Match[]               @relation("MatchCreatedBy")
+  bets                Bet[]
+  simpleTips          SimpleTip[]
+  matchBudgets        UserMatchBudget[]
+  wmWinnerPicks       WmWinnerPick[]
+}
+
+model Wallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  balance   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PointTransaction {
+  id          String               @id @default(cuid())
+  userId      String
+  amount      Int
+  type        PointTransactionType
+  description String
+  createdAt   DateTime             @default(now())
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Match {
+  id          String      @id @default(cuid())
+  homeTeam    String
+  awayTeam    String
+  startsAt    DateTime
+  isKnockout  Boolean     @default(false)
+  homeHalfTimeScore Int?
+  awayHalfTimeScore Int?
+  homeScore   Int?
+  awayScore   Int?
+  /** Summe Karten (z. B. Gelb = 1, Rot = 2) bei Auswertung – für Karten-Markt */
+  totalCards  Int?
+  /** Erste Schwelle N der Karten-Matrix – nur bei Neuanlage */
+  cardsMatrixStart    Int @default(0)
+  /** Anzahl Zeilen der Karten-Matrix – nur bei Neuanlage */
+  cardsMatrixRowCount Int @default(9)
+  /** Summe Eckbälle bei Auswertung – für Ecken-Markt */
+  totalCorners Int?
+  /** Erste Zeilen-Schwelle N (z. B. 6 → Zeilen 6, 7, …) – nur bei Neuanlage */
+  cornersMatrixStart   Int @default(0)
+  /** Anzahl Zeilen der Ecken-Matrix – nur bei Neuanlage */
+  cornersMatrixRowCount Int @default(9)
+  settledAt   DateTime?
+  isPublished Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  createdById String
+  createdBy   User        @relation("MatchCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  markets     MatchMarket[]
+  bets        Bet[]
+  simpleTips  SimpleTip[]
+  userBudgets UserMatchBudget[]
+
+  @@index([startsAt])
+}
+
+model UserMatchBudget {
+  id        String   @id @default(cuid())
+  userId    String
+  matchId   String
+  allocated Int      @default(100)
+  spent     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+  @@index([matchId])
+}
+
+model MatchMarket {
+  id        String         @id @default(cuid())
+  matchId   String
+  type      MarketType
+  title     String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  match     Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  options   MarketOption[]
+
+  @@unique([matchId, type])
+}
+
+model MarketOption {
+  id        String      @id @default(cuid())
+  marketId  String
+  outcome   String
+  odds      Float
+  createdAt DateTime    @default(now())
+  market    MatchMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  bets      Bet[]
+
+  @@index([marketId])
+}
+
+model Bet {
+  id             String       @id @default(cuid())
+  userId         String
+  matchId        String
+  marketOptionId String
+  marketType     MarketType
+  marketTitle    String
+  outcomeLabel   String
+  stake          Int
+  oddsSnapshot   Float
+  status         BetStatus    @default(OPEN)
+  createdAt      DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match          Match        @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  marketOption   MarketOption @relation(fields: [marketOptionId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([matchId])
+}
+
+model SimpleTip {
+  id               String    @id @default(cuid())
+  userId           String
+  matchId          String
+  predictedHome    Int
+  predictedAway    Int
+  stake            Int
+  status           BetStatus @default(OPEN)
+  payout           Int?
+  createdAt        DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match            Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([matchId])
+}
+
+/// Langzeitwette z. B. „WM Sieger 2026“ (ein Markt, feste Optionen, Abgabe vor Turnierbeginn)
+model WmWinnerEvent {
+  id             String    @id @default(cuid())
+  key            String    @unique
+  title          String
+  closesAt       DateTime
+  settledAt      DateTime?
+  winnerOptionId String?   @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  options        WmWinnerOption[]      @relation("WmOptionsInEvent")
+  winnerOption   WmWinnerOption?       @relation("WmWinningOption", fields: [winnerOptionId], references: [id], onDelete: SetNull)
+  picks          WmWinnerPick[]
+
+  @@index([key])
+}
+
+model WmWinnerOption {
+  id              String          @id @default(cuid())
+  eventId         String
+  label           String
+  sortOrder       Int
+  odds            Float
+  isField         Boolean         @default(false)
+  event           WmWinnerEvent   @relation("WmOptionsInEvent", fields: [eventId], references: [id], onDelete: Cascade)
+  winningForEvent WmWinnerEvent? @relation("WmWinningOption")
+  picks           WmWinnerPick[]
+
+  @@unique([eventId, sortOrder])
+  @@index([eventId])
+}
+
+model WmWinnerPick {
+  id           String    @id @default(cuid())
+  userId       String
+  eventId      String
+  optionId     String
+  stake        Int
+  oddsSnapshot Float
+  status       BetStatus @default(OPEN)
+  payoutAmount Int?
+  createdAt    DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event        WmWinnerEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  option       WmWinnerOption @relation(fields: [optionId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@index([userId])
+}

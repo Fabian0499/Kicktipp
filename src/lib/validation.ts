@@ -1,0 +1,296 @@
+import { z } from "zod";
+
+export const registerSchema = z.object({
+  email: z.email().toLowerCase(),
+  username: z
+    .string()
+    .trim()
+    .min(3)
+    .max(24)
+    .regex(/^[a-zA-Z0-9_]+$/, "Nur Buchstaben, Zahlen und Unterstrich erlaubt."),
+  name: z.string().min(2).max(80),
+  password: z
+    .string()
+    .min(8)
+    .max(128)
+    .regex(/[A-Z]/, "Mindestens ein Großbuchstabe erforderlich.")
+    .regex(/[a-z]/, "Mindestens ein Kleinbuchstabe erforderlich.")
+    .regex(/[0-9]/, "Mindestens eine Zahl erforderlich."),
+});
+
+export const loginSchema = z.object({
+  email: z.email().toLowerCase(),
+  password: z.string().min(8).max(128),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z.email().toLowerCase(),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(16),
+  password: z
+    .string()
+    .min(8)
+    .max(128)
+    .regex(/[A-Z]/, "Mindestens ein Großbuchstabe erforderlich.")
+    .regex(/[a-z]/, "Mindestens ein Kleinbuchstabe erforderlich.")
+    .regex(/[0-9]/, "Mindestens eine Zahl erforderlich."),
+});
+
+const oddValue = z.coerce.number().positive().max(1000);
+
+export const adminCreateMatchSchema = z.object({
+  homeTeam: z.string().trim().min(2).max(60),
+  awayTeam: z.string().trim().min(2).max(60),
+  startsAt: z.iso.datetime(),
+  isKnockout: z.boolean().default(false),
+  odds: z.object({
+    oneXTwo: z.object({
+      home: oddValue,
+      draw: oddValue,
+      away: oddValue,
+    }),
+    halfTimeOneXTwo: z.object({
+      home: oddValue,
+      draw: oddValue,
+      away: oddValue,
+    }),
+    halfTimeFullTime: z.object({
+      oneOne: oddValue,
+      oneX: oddValue,
+      oneTwo: oddValue,
+      xOne: oddValue,
+      xX: oddValue,
+      xTwo: oddValue,
+      twoOne: oddValue,
+      twoX: oddValue,
+      twoTwo: oddValue,
+    }),
+    exactScore: z.object({
+      s00: oddValue,
+      s10: oddValue,
+      s01: oddValue,
+      s11: oddValue,
+      s20: oddValue,
+      s02: oddValue,
+      s21: oddValue,
+      s12: oddValue,
+      s22: oddValue,
+      s30: oddValue,
+      s03: oddValue,
+      s31: oddValue,
+      s13: oddValue,
+      s32: oddValue,
+      s23: oddValue,
+      s33: oddValue,
+    }),
+    overUnder15: z.object({
+      over: oddValue,
+      under: oddValue,
+    }),
+    overUnder25: z.object({
+      over: oddValue,
+      under: oddValue,
+    }),
+    overUnder35: z.object({
+      over: oddValue,
+      under: oddValue,
+    }),
+    overUnder45: z.object({
+      over: oddValue,
+      under: oddValue,
+    }),
+    overUnder55: z.object({
+      over: oddValue,
+      under: oddValue,
+    }),
+    bothTeamsToScore: z.object({
+      yes: oddValue,
+      no: oddValue,
+    }),
+    doubleChance: z.object({
+      oneX: oddValue,
+      twelve: oddValue,
+      xTwo: oddValue,
+    }),
+    cardsMatrixStart: z.coerce.number().int().min(0).max(30),
+    cardsMatrixRowCount: z.coerce.number().int().min(1).max(15),
+    cardsMatrix: z
+      .array(
+        z.object({
+          unter: oddValue.optional(),
+          exakt: oddValue,
+          uber: oddValue,
+        }),
+      )
+      .min(1)
+      .max(15),
+    cornersMatrixStart: z.coerce.number().int().min(0).max(30),
+    cornersMatrixRowCount: z.coerce.number().int().min(1).max(15),
+    cornersMatrix: z
+      .array(
+        z.object({
+          unter: oddValue.optional(),
+          exakt: oddValue,
+          uber: oddValue,
+        }),
+      )
+      .min(1)
+      .max(15),
+    toQualify: z
+      .object({
+        home: oddValue,
+        away: oddValue,
+      })
+      .optional(),
+  }),
+})
+  .refine(
+    (data) =>
+      !data.isKnockout ||
+      (data.odds.toQualify !== undefined &&
+        data.odds.toQualify.home >= 1.01 &&
+        data.odds.toQualify.away >= 1.01),
+    {
+      message: "Bei KO-Spielen sind Quoten für „Qualifiziert sich“ (Heim/Gast) erforderlich.",
+      path: ["odds", "toQualify"],
+    },
+  )
+  .refine(
+    (data) => data.odds.cardsMatrix.length === data.odds.cardsMatrixRowCount,
+    {
+      message: "Karten: Anzahl der Quotenzeilen muss zur eingetragenen Zeilenanzahl passen.",
+      path: ["odds", "cardsMatrix"],
+    },
+  )
+  .refine(
+    (data) =>
+      data.odds.cardsMatrixStart + data.odds.cardsMatrixRowCount - 1 <= 50,
+    {
+      message: "Karten: Die höchste Schwelle (erste N + Anzahl Zeilen − 1) darf 50 nicht überschreiten.",
+      path: ["odds", "cardsMatrixStart"],
+    },
+  )
+  .refine(
+    (data) => {
+      const start = data.odds.cardsMatrixStart;
+      const rows = data.odds.cardsMatrix;
+      if (rows.length !== data.odds.cardsMatrixRowCount) {
+        return true;
+      }
+      for (let i = 0; i < rows.length; i += 1) {
+        const n = start + i;
+        if (n === 0) {
+          if (rows[i].unter !== undefined) {
+            return false;
+          }
+        } else if (rows[i].unter === undefined) {
+          return false;
+        }
+      }
+      return true;
+    },
+    {
+      message:
+        "Karten: Bei Schwelle N = 0 entfällt „Unter“ in dieser Zeile; bei N ≥ 1 sind Unter, Exakt und Über je Zeile erforderlich.",
+      path: ["odds", "cardsMatrix"],
+    },
+  )
+  .refine(
+    (data) => data.odds.cornersMatrix.length === data.odds.cornersMatrixRowCount,
+    {
+      message: "Ecken: Anzahl der Quotenzeilen muss zur eingetragenen Zeilenanzahl passen.",
+      path: ["odds", "cornersMatrix"],
+    },
+  )
+  .refine(
+    (data) =>
+      data.odds.cornersMatrixStart + data.odds.cornersMatrixRowCount - 1 <= 50,
+    {
+      message: "Ecken: Die höchste Schwelle (erste N + Anzahl Zeilen − 1) darf 50 nicht überschreiten.",
+      path: ["odds", "cornersMatrixStart"],
+    },
+  )
+  .refine(
+    (data) => {
+      const start = data.odds.cornersMatrixStart;
+      const rows = data.odds.cornersMatrix;
+      if (rows.length !== data.odds.cornersMatrixRowCount) {
+        return true;
+      }
+      for (let i = 0; i < rows.length; i += 1) {
+        const n = start + i;
+        if (n === 0) {
+          if (rows[i].unter !== undefined) {
+            return false;
+          }
+        } else if (rows[i].unter === undefined) {
+          return false;
+        }
+      }
+      return true;
+    },
+    {
+      message:
+        "Ecken: Bei Schwelle N = 0 entfällt „Unter“ in dieser Zeile; bei N ≥ 1 sind Unter, Exakt und Über je Zeile erforderlich.",
+      path: ["odds", "cornersMatrix"],
+    },
+  );
+
+export const placeBetSchema = z.object({
+  selections: z
+    .array(
+      z.object({
+        matchId: z.string().min(10),
+        marketOptionId: z.string().min(10),
+      }),
+    )
+    .min(1)
+    .max(1),
+  stake: z.coerce.number().int().min(1).max(200),
+});
+
+export const placeSimpleTipSchema = z.object({
+  matchId: z.string().min(10),
+  predictedHome: z.coerce.number().int().min(0).max(30),
+  predictedAway: z.coerce.number().int().min(0).max(30),
+});
+
+export const placeWmWinnerSchema = z.object({
+  optionId: z.string().min(4),
+});
+
+export const adminWmWinnerUpdateSchema = z.object({
+  closesAt: z.iso.datetime().optional(),
+  options: z
+    .array(
+      z.object({
+        id: z.string().min(4),
+        odds: z.coerce.number().min(1.01).max(1000),
+      }),
+    )
+    .min(1),
+});
+
+export const adminWmWinnerSettleSchema = z.object({
+  winningOptionId: z.string().min(4),
+});
+
+export const settleMatchSchema = z.object({
+  homeHalfTimeScore: z.coerce.number().int().min(0).max(30),
+  awayHalfTimeScore: z.coerce.number().int().min(0).max(30),
+  homeScore: z.coerce.number().int().min(0).max(30),
+  awayScore: z.coerce.number().int().min(0).max(30),
+  /** Summe Karten (gelb/rot nach interner Zählung beim Eintragen) */
+  totalCards: z.coerce.number().int().min(0).max(50),
+  /** Summe Eckbälle (einheitliche Zählung) */
+  totalCorners: z.coerce.number().int().min(0).max(50),
+});
+
+export const adminAdjustPointsSchema = z.object({
+  userId: z.string().min(10),
+  mode: z.enum(["credit", "debit"]),
+  amount: z.coerce.number().int().min(1).max(5000),
+  reason: z.string().trim().min(3).max(120),
+});

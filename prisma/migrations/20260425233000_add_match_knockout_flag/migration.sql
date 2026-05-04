@@ -1,0 +1,1 @@
+ALTER TABLE "Match" ADD COLUMN "isKnockout" BOOLEAN NOT NULL DEFAULT false;

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="cloverLeaf" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80" />
+      <stop offset="100%" stop-color="#15803d" />
+    </linearGradient>
+  </defs>
+  <!-- Stem -->
+  <path
+    fill="#14532d"
+    d="M94 108 L106 108 L109 178 Q100 192 91 178 Z"
+  />
+  <!-- Four rounded leaves (overlapping circles = softer clover silhouette) -->
+  <circle cx="100" cy="72" r="34" fill="url(#cloverLeaf)" stroke="#166534" stroke-width="2" />
+  <circle cx="132" cy="104" r="34" fill="url(#cloverLeaf)" stroke="#166534" stroke-width="2" />
+  <circle cx="100" cy="136" r="34" fill="url(#cloverLeaf)" stroke="#166534" stroke-width="2" />
+  <circle cx="68" cy="104" r="34" fill="url(#cloverLeaf)" stroke="#166534" stroke-width="2" />
+  <!-- Center -->
+  <circle cx="100" cy="104" r="16" fill="#166534" stroke="#14532d" stroke-width="1.5" />
+</svg>
