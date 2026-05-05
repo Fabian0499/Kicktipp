@@ -887,9 +887,9 @@ export function BetsBoard({
 
                   {cornersMatrixMarkets.length > 0 ? (
                     <section className="rounded-md border p-3">
-                      <h3 className="font-semibold">Ecken</h3>
+                      <h3 className="font-semibold">Hjornespark</h3>
                       <p className="mt-1 text-xs text-zinc-600">
-                        Gesamtzahl Eckbälle – Auswertung wie vom Spielbetreiber eingetragen. Zeile 0 ohne „Unter“.
+                        Gesamtzahl Hjornespark – Auswertung wie vom Spielbetreiber eingetragen. Zeile 0 ohne „Unter“.
                       </p>
                       <div className="mt-3 space-y-4">
                         {cornersMatrixMarkets.map((market) => {
@@ -982,9 +982,9 @@ export function BetsBoard({
 
                   {cardsMatrixMarkets.length > 0 ? (
                     <section className="rounded-md border p-3">
-                      <h3 className="font-semibold">Karten</h3>
+                      <h3 className="font-semibold">Kort</h3>
                       <p className="mt-1 text-xs text-zinc-600">
-                        Gesamtzahl Karten – Auswertung wie vom Spielbetreiber eingetragen. Bei kleinster Schwelle N = 0
+                        Gesamtzahl Kort – Auswertung wie vom Spielbetreiber eingetragen. Bei kleinster Schwelle N = 0
                         kein „Unter“ in dieser Zeile.
                       </p>
                       <div className="mt-3 space-y-4">

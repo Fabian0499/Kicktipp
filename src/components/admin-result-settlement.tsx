@@ -57,7 +57,7 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
       totalCards < 0 ||
       totalCorners < 0
     ) {
-      setError("Bitte ein gültiges Ergebnis inkl. Karten und Ecken (ganze Zahlen) eingeben.");
+      setError("Bitte ein gültiges Ergebnis inkl. Kort und Hjornespark (ganze Zahlen) eingeben.");
       setMessage("");
       return;
     }
@@ -127,8 +127,8 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                   <p className="mt-2 text-sm font-medium text-emerald-700">
                     Bereits ausgewertet - Halbzeit: {match.homeHalfTimeScore} : {match.awayHalfTimeScore}, Endstand:{" "}
                     {match.homeScore} : {match.awayScore}
-                    {match.totalCards != null ? `, Karten gesamt: ${match.totalCards}` : null}
-                    {match.totalCorners != null ? `, Ecken gesamt: ${match.totalCorners}` : null}
+                    {match.totalCards != null ? `, Kort gesamt: ${match.totalCards}` : null}
+                    {match.totalCorners != null ? `, Hjornespark gesamt: ${match.totalCorners}` : null}
                   </p>
                 ) : (
                   <div className="mt-3 flex flex-wrap items-end gap-3">
@@ -217,14 +217,14 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-zinc-700">Karten gesamt</label>
+                      <label className="block text-xs font-semibold text-zinc-700">Kort gesamt</label>
                       <input
                         type="number"
                         min={0}
                         max={50}
                         value={score.totalCards}
                         placeholder="z. B. 4"
-                        title="Summe Karten (einheitliche Zählung für den Karten-Markt)"
+                        title="Summe Kort (einheitliche Zählung für den Kort-Markt)"
                         onChange={(event) =>
                           setScores((current) => ({
                             ...current,
@@ -238,14 +238,14 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-zinc-700">Ecken gesamt</label>
+                      <label className="block text-xs font-semibold text-zinc-700">Hjornespark gesamt</label>
                       <input
                         type="number"
                         min={0}
                         max={50}
                         value={score.totalCorners}
                         placeholder="z. B. 9"
-                        title="Summe Eckbälle (einheitliche Zählung für den Ecken-Markt)"
+                        title="Summe Hjornespark (einheitliche Zählung für den Hjornespark-Markt)"
                         onChange={(event) =>
                           setScores((current) => ({
                             ...current,

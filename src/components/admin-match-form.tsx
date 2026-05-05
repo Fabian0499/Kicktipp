@@ -405,10 +405,10 @@ export function AdminMatchForm() {
         </fieldset>
 
         <fieldset className="rounded-md border p-4 md:col-span-2">
-          <legend className="px-2 text-base font-semibold text-zinc-900">Karten</legend>
+          <legend className="px-2 text-base font-semibold text-zinc-900">Kort</legend>
           <p className="mb-3 text-xs text-zinc-600">
-            Gesamtzahl Karten (nach eurer Zählregel). Pro Zeile gilt die Schwelle <strong>N</strong>. Nur wenn die
-            kleinste Schwelle <strong>N = 0</strong> ist, entfällt dort „Unter“. Sonst wie bei Ecken: Unter / Exakt /
+            Gesamtzahl Kort (nach eurer Zählregel). Pro Zeile gilt die Schwelle <strong>N</strong>. Nur wenn die
+            kleinste Schwelle <strong>N = 0</strong> ist, entfällt dort „Unter“. Sonst wie bei Hjornespark: Unter / Exakt /
             Über.
           </p>
           <div className="mb-4 flex flex-wrap gap-4">
@@ -516,9 +516,9 @@ export function AdminMatchForm() {
         </fieldset>
 
         <fieldset className="rounded-md border p-4 md:col-span-2">
-          <legend className="px-2 text-base font-semibold text-zinc-900">Ecken</legend>
+          <legend className="px-2 text-base font-semibold text-zinc-900">Hjornespark</legend>
           <p className="mb-3 text-xs text-zinc-600">
-            Gesamtzahl Eckbälle (nach eurer Zählregel). Pro Zeile gilt die Schwelle <strong>N</strong> (Unter /
+            Gesamtzahl Hjornespark (nach eurer Zählregel). Pro Zeile gilt die Schwelle <strong>N</strong> (Unter /
             Exakt / Über). Nur wenn die <strong>kleinste Schwelle N = 0</strong> ist, entfällt bei dieser Zeile das
             Feld „Unter“ (nicht sinnvoll). Beginnst du z. B. bei <strong>N = 6</strong>, haben alle Zeilen Unter,
             Exakt und Über.

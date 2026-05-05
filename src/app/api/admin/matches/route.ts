@@ -156,7 +156,7 @@ export async function POST(request: Request) {
         );
       }
     }
-    await createMarket("CARDS_MATRIX" as MarketType, "Karten", cardOptions);
+    await createMarket("CARDS_MATRIX" as MarketType, "Kort", cardOptions);
 
     const cornerOptions: Array<{ outcome: string; odds: number }> = [];
     const cStart = odds.cornersMatrixStart;
@@ -177,7 +177,7 @@ export async function POST(request: Request) {
         );
       }
     }
-    await createMarket("CORNERS_MATRIX" as MarketType, "Ecken", cornerOptions);
+    await createMarket("CORNERS_MATRIX" as MarketType, "Hjornespark", cornerOptions);
 
     if (isKnockout && odds.toQualify) {
       await createMarket(MarketType.TO_QUALIFY, "Qualifiziert sich", [
