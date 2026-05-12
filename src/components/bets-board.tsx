@@ -1185,9 +1185,6 @@ export function BetsBoard({
                         Hjornespark
                         <InfoTooltip text={"Hier tippst du auf die Gesamtzahl der Hjornespark im Spiel: Unter, genau die Anzahl, oder Über.\n\nBEISPIEL\nMarkt: Hjornespark\nAuswahl: Über 6\n\nIn diesem Beispiel wettest du, dass im Spiel mehr als 6 Hjornespark ausgeführt werden. Um die Wette zu gewinnen, müssen mindestens 7 Hjornespark entstehen."} />
                       </h3>
-                      <p className="mt-1 text-xs text-zinc-600">
-                        Gesamtzahl Hjornespark – Auswertung wie vom Spielbetreiber eingetragen. Zeile 0 ohne „Unter“.
-                      </p>
                       <div className="mt-3 space-y-4">
                         {cornersMatrixMarkets.map((market) => {
                           const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
@@ -1284,10 +1281,6 @@ export function BetsBoard({
                         Kort
                         <InfoTooltip text={"Hier tippst du auf die Gesamtzahl der Kort nach eurer Zählregel: Unter, genau die Anzahl, oder Über.\n\nBEISPIEL\nMarkt: Kort\nAuswahl: Über 4\n\nIn diesem Beispiel wettest du, dass im Spiel mehr als 4 Kort gezählt werden. Um die Wette zu gewinnen, müssen mindestens 5 Kort entstehen."} />
                       </h3>
-                      <p className="mt-1 text-xs text-zinc-600">
-                        Gesamtzahl Kort – Auswertung wie vom Spielbetreiber eingetragen. Bei kleinster Schwelle N = 0
-                        kein „Unter“ in dieser Zeile.
-                      </p>
                       <div className="mt-3 space-y-4">
                         {cardsMatrixMarkets.map((market) => {
                           const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
@@ -1435,7 +1428,7 @@ export function BetsBoard({
                       </h3>
                       <p className="mt-1 text-xs text-zinc-600">
                         <strong>X:X</strong> ist die Sammelquote für Ergebnisse, bei denen mindestens eine Mannschaft{" "}
-                        <strong>mehr als 4 Tore</strong> erzielt (außerhalb der Matrix 0:0–4:4).
+                        <strong>mehr als 4 Tore</strong> erzielt.
                       </p>
                       <div className="mt-3 space-y-3">
                         {exactScoreMarkets.map((market) => (
