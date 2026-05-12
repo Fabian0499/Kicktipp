@@ -8,6 +8,7 @@ import { AdminResultSettlementSection } from "@/components/admin-result-settleme
 import { AdminUserApprovals } from "@/components/admin-user-approvals";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { sortMarketOptions } from "@/lib/market-option-order";
 import { WM_WINNER_EVENT_KEY } from "@/lib/wm-winner";
 
 export default async function AdminPage() {
@@ -24,7 +25,7 @@ export default async function AdminPage() {
     include: {
       markets: {
         include: {
-          options: { orderBy: { createdAt: "asc" } },
+          options: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] },
         },
         orderBy: { createdAt: "asc" },
       },
@@ -72,7 +73,7 @@ export default async function AdminPage() {
               id: market.id,
               type: market.type,
               title: market.title,
-              options: market.options.map((option) => ({
+              options: sortMarketOptions(market.type, market.options).map((option) => ({
                 id: option.id,
                 outcome: option.outcome,
                 odds: option.odds,

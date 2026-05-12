@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { BetsBoard } from "@/components/bets-board";
+import { sortMarketOptions } from "@/lib/market-option-order";
 
 export const dynamic = "force-dynamic";
 
@@ -108,7 +109,9 @@ export default async function BetsPage() {
     include: {
       markets: {
         include: {
-          options: true,
+          options: {
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          },
         },
         orderBy: { createdAt: "asc" },
       },
@@ -148,7 +151,7 @@ export default async function BetsPage() {
                 id: market.id,
                 type: market.type,
                 title: market.title,
-                options: market.options.map((option) => ({
+                options: sortMarketOptions(market.type, market.options).map((option) => ({
                   id: option.id,
                   outcome: option.outcome,
                   odds: option.odds,
