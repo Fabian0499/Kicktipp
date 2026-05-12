@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { formatCardsMatrixOutcomeLabel } from "@/lib/cards-market";
 import { formatCornersMatrixOutcomeLabel } from "@/lib/corners-market";
+import { formatGoalsMatrixOutcomeLabel } from "@/lib/goals-market";
 import { formatHandicapMatrixOutcomeLabel } from "@/lib/handicap-market";
 import { usePersistedDetailsOpen } from "@/hooks/use-persisted-details-open";
 
@@ -39,6 +40,9 @@ function displayOutcomeLabel(marketType: string, outcome: string, homeTeam: stri
   }
   if (marketType === "CORNERS_MATRIX") {
     return formatCornersMatrixOutcomeLabel(outcome);
+  }
+  if (marketType === "GOALS_MATRIX") {
+    return formatGoalsMatrixOutcomeLabel(outcome);
   }
   if (marketType === "TO_QUALIFY") {
     if (outcome === "1") return `${homeTeam} (1)`;

@@ -41,6 +41,8 @@ enum MarketType {
   CARDS_MATRIX
   /** Gesamtecken (0–8 Zeilen × Unter / Exakt / Über) */
   CORNERS_MATRIX
+  /** Gesamttore (Zeilen × Unter / Exakt / Über) */
+  GOALS_MATRIX
   /** Handicap 0:N mit Ausgängen 1 / X / 2 */
   HANDICAP_MATRIX
 }

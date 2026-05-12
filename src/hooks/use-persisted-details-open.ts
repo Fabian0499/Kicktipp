@@ -13,15 +13,21 @@ export function usePersistedDetailsOpen(storageKey: string, defaultOpen = true) 
 
   useLayoutEffect(() => {
     allowPersist.current = false;
+    let storedOpen: boolean | null = null;
     try {
       const stored = sessionStorage.getItem(storageKey);
       if (stored !== null) {
-        setOpen(stored === "true");
+        storedOpen = stored === "true";
       }
     } catch {
       /* ignore */
     }
-    allowPersist.current = true;
+    queueMicrotask(() => {
+      if (storedOpen !== null) {
+        setOpen(storedOpen);
+      }
+      allowPersist.current = true;
+    });
   }, [storageKey]);
 
   const onToggle = useCallback(

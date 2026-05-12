@@ -15,6 +15,8 @@ export function AdminMatchForm() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isKnockout, setIsKnockout] = useState(false);
+  const [goalsRowStart, setGoalsRowStart] = useState(1);
+  const [goalsRowCount, setGoalsRowCount] = useState(5);
   const [cardsRowStart, setCardsRowStart] = useState(0);
   const [cardsRowCount, setCardsRowCount] = useState(9);
   const [cornersRowStart, setCornersRowStart] = useState(0);
@@ -69,26 +71,21 @@ export function AdminMatchForm() {
           }
           return row;
         })(),
-        overUnder15: {
-          over: Number(formData.get("oddOver15")),
-          under: Number(formData.get("oddUnder15")),
-        },
-        overUnder25: {
-          over: Number(formData.get("oddOver25")),
-          under: Number(formData.get("oddUnder25")),
-        },
-        overUnder35: {
-          over: Number(formData.get("oddOver35")),
-          under: Number(formData.get("oddUnder35")),
-        },
-        overUnder45: {
-          over: Number(formData.get("oddOver45")),
-          under: Number(formData.get("oddUnder45")),
-        },
-        overUnder55: {
-          over: Number(formData.get("oddOver55")),
-          under: Number(formData.get("oddUnder55")),
-        },
+        goalsMatrixStart: Number(formData.get("goalsMatrixStart")),
+        goalsMatrixRowCount: Number(formData.get("goalsMatrixRowCount")),
+        goalsMatrix: (() => {
+          const gStart = Number(formData.get("goalsMatrixStart"));
+          const gCount = Number(formData.get("goalsMatrixRowCount"));
+          return Array.from({ length: gCount }, (_, i) => {
+            const n = gStart + i;
+            return {
+              unter: Number(formData.get(`oddGoalsU${i}`)),
+              exakt: Number(formData.get(`oddGoalsE${i}`)),
+              uber: Number(formData.get(`oddGoalsO${i}`)),
+              n,
+            };
+          });
+        })(),
         bothTeamsToScore: {
           yes: Number(formData.get("oddBttsYes")),
           no: Number(formData.get("oddBttsNo")),
@@ -179,6 +176,8 @@ export function AdminMatchForm() {
     setHomeTeam("Deutschland");
     setAwayTeam("Ukraine");
     setManualGroupCode("");
+    setGoalsRowStart(1);
+    setGoalsRowCount(5);
     setCardsRowStart(0);
     setCardsRowCount(9);
     setCornersRowStart(0);
@@ -386,48 +385,76 @@ export function AdminMatchForm() {
         <fieldset className="rounded-lg border-2 border-zinc-400 bg-zinc-50/70 p-4 md:col-span-2">
           <legend className="px-2 text-base font-semibold text-zinc-900">Über / Unter Tore</legend>
           <p className="mb-4 text-xs text-zinc-600">
-            Gesamttore (Regelzeit) – getrennte Quoten für Über und Unter pro Linie (1,5 · 2,5 · 3,5 · 4,5 · 5,5).
+            Gesamttore (Regelzeit) – pro Zeile getrennte Quoten für Unter, Exakt und Über.
           </p>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <fieldset className="rounded-md border border-zinc-300 bg-white p-3">
-              <legend className="px-2 text-sm font-semibold text-zinc-800">Linie 1,5</legend>
-              <div className="mt-2 grid gap-2">
-                <input name="oddOver15" type="number" step="0.01" min="1.01" placeholder="Über 1.5" required className="rounded-md border border-zinc-300 px-3 py-2" />
-                <input name="oddUnder15" type="number" step="0.01" min="1.01" placeholder="Unter 1.5" required className="rounded-md border border-zinc-300 px-3 py-2" />
-              </div>
-            </fieldset>
-
-            <fieldset className="rounded-md border border-zinc-300 bg-white p-3">
-              <legend className="px-2 text-sm font-semibold text-zinc-800">Linie 2,5</legend>
-              <div className="mt-2 grid gap-2">
-                <input name="oddOver25" type="number" step="0.01" min="1.01" placeholder="Über 2.5" required className="rounded-md border border-zinc-300 px-3 py-2" />
-                <input name="oddUnder25" type="number" step="0.01" min="1.01" placeholder="Unter 2.5" required className="rounded-md border border-zinc-300 px-3 py-2" />
-              </div>
-            </fieldset>
-
-            <fieldset className="rounded-md border border-zinc-300 bg-white p-3">
-              <legend className="px-2 text-sm font-semibold text-zinc-800">Linie 3,5</legend>
-              <div className="mt-2 grid gap-2">
-                <input name="oddOver35" type="number" step="0.01" min="1.01" placeholder="Über 3.5" required className="rounded-md border border-zinc-300 px-3 py-2" />
-                <input name="oddUnder35" type="number" step="0.01" min="1.01" placeholder="Unter 3.5" required className="rounded-md border border-zinc-300 px-3 py-2" />
-              </div>
-            </fieldset>
-
-            <fieldset className="rounded-md border border-zinc-300 bg-white p-3">
-              <legend className="px-2 text-sm font-semibold text-zinc-800">Linie 4,5</legend>
-              <div className="mt-2 grid gap-2">
-                <input name="oddOver45" type="number" step="0.01" min="1.01" placeholder="Über 4.5" required className="rounded-md border border-zinc-300 px-3 py-2" />
-                <input name="oddUnder45" type="number" step="0.01" min="1.01" placeholder="Unter 4.5" required className="rounded-md border border-zinc-300 px-3 py-2" />
-              </div>
-            </fieldset>
-
-            <fieldset className="rounded-md border border-zinc-300 bg-white p-3">
-              <legend className="px-2 text-sm font-semibold text-zinc-800">Linie 5,5</legend>
-              <div className="mt-2 grid gap-2">
-                <input name="oddOver55" type="number" step="0.01" min="1.01" placeholder="Über 5.5" required className="rounded-md border border-zinc-300 px-3 py-2" />
-                <input name="oddUnder55" type="number" step="0.01" min="1.01" placeholder="Unter 5.5" required className="rounded-md border border-zinc-300 px-3 py-2" />
-              </div>
-            </fieldset>
+          <div className="mb-4 flex flex-wrap gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-800">Erste Toranzahl</label>
+              <input
+                name="goalsMatrixStart"
+                type="number"
+                min={1}
+                max={30}
+                required
+                value={goalsRowStart}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (Number.isFinite(v)) {
+                    setGoalsRowStart(Math.min(30, Math.max(1, Math.round(v))));
+                  }
+                }}
+                className="mt-1 w-24 rounded-md border border-zinc-300 px-2 py-1.5 tabular-nums"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-zinc-800">Anzahl Zeilen</label>
+              <input
+                name="goalsMatrixRowCount"
+                type="number"
+                min={1}
+                max={15}
+                required
+                value={goalsRowCount}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (Number.isFinite(v)) {
+                    setGoalsRowCount(Math.min(15, Math.max(1, Math.round(v))));
+                  }
+                }}
+                className="mt-1 w-24 rounded-md border border-zinc-300 px-2 py-1.5 tabular-nums"
+              />
+            </div>
+          </div>
+          <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
+            <table className="w-full min-w-[32rem] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
+                  <th className="px-3 py-2 font-semibold text-zinc-800">Tore</th>
+                  <th className="px-3 py-2 font-semibold text-zinc-800">Unter</th>
+                  <th className="px-3 py-2 font-semibold text-zinc-800">Exakt</th>
+                  <th className="px-3 py-2 font-semibold text-zinc-800">Über</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: goalsRowCount }, (_, i) => {
+                  const n = goalsRowStart + i;
+                  return (
+                    <tr key={i} className="border-b border-zinc-100">
+                      <td className="whitespace-nowrap px-3 py-2 font-medium tabular-nums text-zinc-900">{n}</td>
+                      <td className="px-2 py-1.5">
+                        <input name={`oddGoalsU${i}`} type="number" step="0.01" min="1.01" max={1000} required placeholder="Quote" className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input name={`oddGoalsE${i}`} type="number" step="0.01" min="1.01" max={1000} required placeholder="Quote" className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5" />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input name={`oddGoalsO${i}`} type="number" step="0.01" min="1.01" max={1000} required placeholder="Quote" className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5" />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </fieldset>
 

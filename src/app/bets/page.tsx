@@ -8,6 +8,7 @@ const marketOrder: Record<string, number> = {
   ONE_X_TWO: 10,
   TO_QUALIFY: 25,
   BOTH_TEAMS_TO_SCORE: 30,
+  GOALS_MATRIX: 40,
   OVER_UNDER_1_5: 40,
   OVER_UNDER_2_5: 41,
   OVER_UNDER_3_5: 42,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { formatGoalsMatrixOutcomeLabel } from "@/lib/goals-market";
 import { formatHandicapMatrixOutcomeLabel } from "@/lib/handicap-market";
 
 type BetRow = {
@@ -50,6 +51,9 @@ const DEFAULT_STATE: Record<SectionKey, boolean> = {
 function displayOutcomeLabel(marketType: string, outcome: string, homeLabel?: string, awayLabel?: string): string {
   if (marketType === "HANDICAP_MATRIX") {
     return formatHandicapMatrixOutcomeLabel(outcome, homeLabel, awayLabel);
+  }
+  if (marketType === "GOALS_MATRIX") {
+    return formatGoalsMatrixOutcomeLabel(outcome);
   }
   return outcome;
 }

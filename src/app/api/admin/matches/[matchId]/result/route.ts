@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { cardsMatrixOutcomeWins } from "@/lib/cards-market";
 import { cornersMatrixOutcomeWins } from "@/lib/corners-market";
+import { goalsMatrixOutcomeWins } from "@/lib/goals-market";
 import { handicapMatrixOutcomeWins } from "@/lib/handicap-market";
 import { winningExactScoreOutcomes } from "@/lib/exact-score";
 import { payoutFromGrossReturn } from "@/lib/bet-payout";
@@ -147,6 +148,8 @@ export async function POST(request: Request, context: { params: Promise<{ matchI
           won = cardsMatrixOutcomeWins(bet.outcomeLabel, totalCards);
         } else if ((bet.marketType as string) === "CORNERS_MATRIX") {
           won = cornersMatrixOutcomeWins(bet.outcomeLabel, totalCorners);
+        } else if ((bet.marketType as string) === "GOALS_MATRIX") {
+          won = goalsMatrixOutcomeWins(bet.outcomeLabel, homeScore + awayScore);
         } else if ((bet.marketType as string) === "HANDICAP_MATRIX") {
           won = handicapMatrixOutcomeWins(bet.outcomeLabel, homeScore, awayScore);
         } else {

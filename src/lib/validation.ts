@@ -73,26 +73,18 @@ export const adminCreateMatchSchema = z.object({
       twoTwo: oddValue,
     }),
     exactScore: exactScoreOddsSchema,
-    overUnder15: z.object({
-      over: oddValue,
-      under: oddValue,
-    }),
-    overUnder25: z.object({
-      over: oddValue,
-      under: oddValue,
-    }),
-    overUnder35: z.object({
-      over: oddValue,
-      under: oddValue,
-    }),
-    overUnder45: z.object({
-      over: oddValue,
-      under: oddValue,
-    }),
-    overUnder55: z.object({
-      over: oddValue,
-      under: oddValue,
-    }),
+    goalsMatrixStart: z.coerce.number().int().min(1).max(30),
+    goalsMatrixRowCount: z.coerce.number().int().min(1).max(15),
+    goalsMatrix: z
+      .array(
+        z.object({
+          unter: oddValue,
+          exakt: oddValue,
+          uber: oddValue,
+        }),
+      )
+      .min(1)
+      .max(15),
     bothTeamsToScore: z.object({
       yes: oddValue,
       no: oddValue,
@@ -170,6 +162,20 @@ export const adminCreateMatchSchema = z.object({
     {
       message: "Handicap: Pro Zeile darf nur eine Seite einen Vorsprung haben.",
       path: ["odds", "handicapMatrix"],
+    },
+  )
+  .refine(
+    (data) => data.odds.goalsMatrix.length === data.odds.goalsMatrixRowCount,
+    {
+      message: "Tore: Anzahl der Quotenzeilen muss zur eingetragenen Zeilenanzahl passen.",
+      path: ["odds", "goalsMatrix"],
+    },
+  )
+  .refine(
+    (data) => data.odds.goalsMatrixStart + data.odds.goalsMatrixRowCount - 1 <= 50,
+    {
+      message: "Tore: Die höchste Schwelle (erste Toranzahl + Anzahl Zeilen − 1) darf 50 nicht überschreiten.",
+      path: ["odds", "goalsMatrixStart"],
     },
   )
   .refine(

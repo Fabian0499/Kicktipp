@@ -6,6 +6,7 @@ describe("profiMarketCategoryKey", () => {
   it("maps all goal over/under line types to one category", () => {
     expect(profiMarketCategoryKey("OVER_UNDER_1_5")).toBe("GOALS_OVER_UNDER");
     expect(profiMarketCategoryKey("OVER_UNDER_5_5")).toBe("GOALS_OVER_UNDER");
+    expect(profiMarketCategoryKey("GOALS_MATRIX")).toBe("GOALS_OVER_UNDER");
     expect(profiMarketCategoryKey(MarketType.OVER_UNDER_2_5)).toBe("GOALS_OVER_UNDER");
   });
 

@@ -115,30 +115,19 @@ export async function POST(request: Request) {
       })(),
     );
 
-    await createMarket("OVER_UNDER_1_5" as MarketType, "Über/Unter 1.5", [
-      { outcome: "Über 1.5", odds: odds.overUnder15.over },
-      { outcome: "Unter 1.5", odds: odds.overUnder15.under },
-    ]);
-
-    await createMarket(MarketType.OVER_UNDER_2_5, "Über/Unter 2.5", [
-      { outcome: "Über 2.5", odds: odds.overUnder25.over },
-      { outcome: "Unter 2.5", odds: odds.overUnder25.under },
-    ]);
-
-    await createMarket("OVER_UNDER_3_5" as MarketType, "Über/Unter 3.5", [
-      { outcome: "Über 3.5", odds: odds.overUnder35.over },
-      { outcome: "Unter 3.5", odds: odds.overUnder35.under },
-    ]);
-
-    await createMarket("OVER_UNDER_4_5" as MarketType, "Über/Unter 4.5", [
-      { outcome: "Über 4.5", odds: odds.overUnder45.over },
-      { outcome: "Unter 4.5", odds: odds.overUnder45.under },
-    ]);
-
-    await createMarket("OVER_UNDER_5_5" as MarketType, "Über/Unter 5.5", [
-      { outcome: "Über 5.5", odds: odds.overUnder55.over },
-      { outcome: "Unter 5.5", odds: odds.overUnder55.under },
-    ]);
+    const goalOptions: Array<{ outcome: string; odds: number }> = [];
+    const gStart = odds.goalsMatrixStart;
+    const gCount = odds.goalsMatrixRowCount;
+    for (let i = 0; i < gCount; i += 1) {
+      const n = gStart + i;
+      const row = odds.goalsMatrix[i];
+      goalOptions.push(
+        { outcome: `GOALS:U:${n}`, odds: row.unter },
+        { outcome: `GOALS:E:${n}`, odds: row.exakt },
+        { outcome: `GOALS:O:${n}`, odds: row.uber },
+      );
+    }
+    await createMarket("GOALS_MATRIX" as MarketType, "Über / Unter Tore", goalOptions);
 
     await createMarket(MarketType.BOTH_TEAMS_TO_SCORE, "Beide Teams treffen", [
       { outcome: "Ja", odds: odds.bothTeamsToScore.yes },

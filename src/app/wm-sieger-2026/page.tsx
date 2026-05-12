@@ -64,8 +64,8 @@ export default async function WmSieger2026Page() {
     }
   }
 
-  const now = Date.now();
-  const acceptingTips = !event.settledAt && now < event.closesAt.getTime();
+  const [{ now }] = await db.$queryRaw<Array<{ now: Date }>>`SELECT NOW() AS now`;
+  const acceptingTips = !event.settledAt && now.getTime() < event.closesAt.getTime();
 
   return (
     <main
