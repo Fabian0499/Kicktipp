@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -61,10 +62,17 @@ export function SiteHeader() {
   return (
     <header className="border-b border-black/10 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link href="/" className="text-lg font-semibold text-black">
-          Kicktipp
+        <Link href="/" className="block">
+          <Image
+            src="/kicktipp-logo.png"
+            alt="Kicktipp Logo"
+            width={130}
+            height={50}
+            priority
+            className="mix-blend-multiply"
+          />
         </Link>
-        <nav className="flex items-center gap-4 text-sm">
+        <nav className="flex items-center gap-5 text-base">
           {links
             .filter((link) => !(isAuthenticated && link.href === "/"))
             .map((link) => {
@@ -73,7 +81,7 @@ export function SiteHeader() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={active ? "font-semibold text-black" : "text-black/70 hover:text-black"}
+                className={active ? "font-semibold text-black" : "font-medium text-black hover:text-black"}
               >
                 {link.label}
               </Link>
@@ -82,7 +90,7 @@ export function SiteHeader() {
           {sessionUser?.role === "ADMIN" ? (
             <Link
               href="/admin"
-              className={pathname === "/admin" ? "font-semibold text-black" : "text-black/70 hover:text-black"}
+              className={pathname === "/admin" ? "font-semibold text-black" : "font-medium text-black hover:text-black"}
             >
               Verwaltung
             </Link>
@@ -91,12 +99,12 @@ export function SiteHeader() {
             <button
               type="button"
               onClick={handleLogout}
-              className="cursor-pointer rounded-md border px-3 py-1.5 text-black/80 hover:text-black"
+              className="cursor-pointer rounded-md border px-3 py-1.5 text-base font-medium text-black hover:text-black"
             >
               Logout
             </button>
           ) : (
-            <Link href="/login" className="rounded-md border px-3 py-1.5 text-black/80 hover:text-black">
+            <Link href="/login" className="rounded-md border px-3 py-1.5 text-base font-medium text-black hover:text-black">
               Login
             </Link>
           )}

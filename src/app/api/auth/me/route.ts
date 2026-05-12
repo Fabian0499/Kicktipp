@@ -12,7 +12,6 @@ export async function GET() {
       id: user.id,
       email: user.email,
       username: user.username,
-      name: user.name,
       role: user.role,
       balance: user.wallet?.balance ?? 0,
     },

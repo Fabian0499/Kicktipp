@@ -6,7 +6,6 @@ export const dynamic = "force-dynamic";
 
 const marketOrder: Record<string, number> = {
   ONE_X_TWO: 10,
-  DOUBLE_CHANCE: 20,
   TO_QUALIFY: 25,
   BOTH_TEAMS_TO_SCORE: 30,
   OVER_UNDER_1_5: 40,
@@ -14,7 +13,7 @@ const marketOrder: Record<string, number> = {
   OVER_UNDER_3_5: 42,
   OVER_UNDER_4_5: 43,
   OVER_UNDER_5_5: 44,
-  HALF_TIME_ONE_X_TWO: 50,
+  HANDICAP_MATRIX: 45,
   HALF_TIME_FULL_TIME: 51,
   CORNERS_MATRIX: 55,
   CARDS_MATRIX: 56,
@@ -30,6 +29,15 @@ export default async function BetsPage() {
       })
     : [];
   const userSimpleTips = currentUser
+    ? await db.simpleTip.findMany({
+        where: {
+          userId: currentUser.id,
+          status: "OPEN",
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
+  const userSimpleTipExactBets = currentUser
     ? await db.bet.findMany({
         where: {
           userId: currentUser.id,
@@ -63,10 +71,15 @@ export default async function BetsPage() {
 
   const existingSimpleTipByMatch = userSimpleTips.reduce<Record<string, string>>((acc, entry) => {
     if (!acc[entry.matchId]) {
-      acc[entry.matchId] = entry.outcomeLabel;
+      acc[entry.matchId] = `${entry.predictedHome}:${entry.predictedAway}`;
     }
     return acc;
   }, {});
+  for (const entry of userSimpleTipExactBets) {
+    if (!existingSimpleTipByMatch[entry.matchId]) {
+      existingSimpleTipByMatch[entry.matchId] = entry.outcomeLabel;
+    }
+  }
   const usedStakeByMatch = userMatchBudgets.reduce<Record<string, number>>((acc, item) => {
     acc[item.matchId] = Math.min(item.allocated, item.spent);
     return acc;
@@ -104,7 +117,7 @@ export default async function BetsPage() {
 
   return (
     <main
-      className="relative flex flex-1 items-start bg-cover bg-center bg-no-repeat"
+      className="relative flex min-h-screen flex-1 items-start bg-cover bg-center bg-fixed bg-no-repeat"
       style={{ backgroundImage: "url('/kicktipp-bg-2026.png')" }}
     >
       <div className="absolute inset-0 bg-black/45" />
@@ -112,6 +125,7 @@ export default async function BetsPage() {
         <h1 className="text-3xl font-bold text-white">Tipps</h1>
         <BetsBoard
           isAuthenticated={Boolean(currentUser)}
+          currentUserId={currentUser?.id ?? null}
           existingSimpleTipByMatch={existingSimpleTipByMatch}
           openProfiBetsByMatch={openProfiBetsByMatch}
           usedStakeByMatch={usedStakeByMatch}
@@ -120,6 +134,7 @@ export default async function BetsPage() {
             id: match.id,
             homeTeam: match.homeTeam,
             awayTeam: match.awayTeam,
+            groupCode: (match as unknown as { groupCode?: string | null }).groupCode ?? null,
             startsAt: match.startsAt.toISOString(),
             isKnockout: match.isKnockout,
             markets: [...match.markets]

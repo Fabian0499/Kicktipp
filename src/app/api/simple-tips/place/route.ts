@@ -82,7 +82,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const existingSimpleTip = await db.bet.findFirst({
+  const existingSimpleTipRecord = await db.simpleTip.findFirst({
+    where: {
+      userId: currentUser.id,
+      matchId,
+      status: BetStatus.OPEN,
+    },
+  });
+  const existingSimpleTipBet = await db.bet.findFirst({
     where: {
       userId: currentUser.id,
       matchId,
@@ -90,7 +97,7 @@ export async function POST(request: Request) {
       OR: [{ marketTitle: "Einfach-Tipp (1X2)" }, { marketTitle: "Einfach-Tipp (Exact Score)" }],
     },
   });
-  if (existingSimpleTip) {
+  if (existingSimpleTipRecord || existingSimpleTipBet) {
     return NextResponse.json(
       { error: "Für dieses Spiel wurde bereits ein Einfach-Tipp abgegeben." },
       { status: 400 },
@@ -98,6 +105,17 @@ export async function POST(request: Request) {
   }
 
   await db.$transaction(async (tx) => {
+    await tx.simpleTip.create({
+      data: {
+        userId: currentUser.id,
+        matchId,
+        predictedHome,
+        predictedAway,
+        stake: totalStake,
+        status: BetStatus.OPEN,
+      },
+    });
+
     await (tx as unknown as { bet: { create: (args: unknown) => Promise<unknown> } }).bet.create({
       data: {
         userId: currentUser.id,

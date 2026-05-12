@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   await sendMail({
     to: user.email,
     subject: "Passwort zurücksetzen",
-    text: `Hallo ${user.name}, nutze diesen Link zum Zurücksetzen deines Passworts: ${resetLink}`,
+    text: `Hallo ${user.username ?? user.email}, nutze diesen Link zum Zurücksetzen deines Passworts: ${resetLink}`,
   });
 
   return NextResponse.json({ ok: true });

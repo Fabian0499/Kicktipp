@@ -2,6 +2,8 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { usePersistedDetailsOpen } from "@/hooks/use-persisted-details-open";
+import { WmWinnerFlag } from "@/components/wm-winner-flag";
+import { wmWinnerDisplayLabel } from "@/lib/wm-winner";
 
 const WM_SIEGER_DETAILS_STORAGE_KEY = "kicktipp-admin-wm-sieger-details-open";
 
@@ -135,7 +137,12 @@ export function AdminWmWinner({
             <tbody>
               {options.map((option) => (
                 <tr key={option.id} className="border-b border-zinc-100">
-                  <td className="py-2 pr-4">{option.label}</td>
+                  <td className="py-2 pr-4">
+                    <span className="flex items-center gap-3">
+                      <WmWinnerFlag option={option} />
+                      <span>{wmWinnerDisplayLabel(option)}</span>
+                    </span>
+                  </td>
                   <td className="py-2">
                     <input
                       type="number"
@@ -183,7 +190,7 @@ export function AdminWmWinner({
               <option value="">– bitte wählen –</option>
               {options.map((option) => (
                 <option key={option.id} value={option.id}>
-                  {option.label}
+                  {wmWinnerDisplayLabel(option)}
                 </option>
               ))}
             </select>

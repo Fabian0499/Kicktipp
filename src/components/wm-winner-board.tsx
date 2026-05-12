@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { WM_WINNER_STAKE } from "@/lib/wm-winner";
+import { WmWinnerFlag } from "@/components/wm-winner-flag";
+import { WM_WINNER_STAKE, wmWinnerDisplayFromStoredLabel, wmWinnerDisplayLabel } from "@/lib/wm-winner";
 
 type OptionRow = {
   id: string;
@@ -48,6 +49,13 @@ export function WmWinnerBoard({
   const selectedOption = selectedId ? options.find((option) => option.id === selectedId) : null;
 
   function selectOption(id: string) {
+    if (selectedId === id) {
+      setSelectedId(null);
+      setIsSlipOpen(false);
+      setError("");
+      return;
+    }
+
     setSelectedId(id);
     setIsSlipOpen(true);
     setError("");
@@ -119,8 +127,14 @@ export function WmWinnerBoard({
       {userPick ? (
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 text-zinc-900">
           <p className="font-semibold text-blue-950">Dein Tipp</p>
-          <p className="mt-1 text-lg">
-            {userPick.label} @ {userPick.oddsSnapshot.toFixed(2)}
+          <p className="mt-1 flex w-full flex-wrap items-center justify-between gap-3 text-lg">
+            <span className="flex min-w-0 items-center gap-3">
+              <WmWinnerFlag storedLabel={userPick.label} size="lg" />
+              <span className="min-w-0">{wmWinnerDisplayFromStoredLabel(userPick.label)}</span>
+            </span>
+            <span className="shrink-0 font-semibold tabular-nums text-blue-800">
+              {userPick.oddsSnapshot.toFixed(2)}
+            </span>
           </p>
           <p className="mt-1 text-sm text-zinc-600">
             Einsatz: {userPick.stake} Punkte · abgegeben am{" "}
@@ -134,7 +148,7 @@ export function WmWinnerBoard({
           <section>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-white/90">Top-Favoriten</h3>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {favorites.map((option) => {
+              {[...favorites, ...(fieldOption ? [fieldOption] : [])].map((option) => {
                 const active = selectedId === option.id;
                 return (
                   <button
@@ -147,34 +161,25 @@ export function WmWinnerBoard({
                         : "border-white/30 bg-white/95 hover:border-blue-400 hover:bg-blue-50/70"
                     }`}
                   >
-                    <p className="font-medium text-zinc-900">{option.label}</p>
-                    <p className="mt-1 text-lg font-semibold text-blue-700">{option.odds.toFixed(2)}</p>
+                    <span className="flex w-full min-w-0 items-center justify-between gap-3">
+                      <span className="flex min-w-0 items-center gap-3 font-medium text-zinc-900">
+                        <WmWinnerFlag option={option} size="lg" />
+                        <span className="min-w-0">{wmWinnerDisplayLabel(option)}</span>
+                      </span>
+                      <span className="shrink-0 text-lg font-semibold tabular-nums text-blue-700">
+                        {option.odds.toFixed(2)}
+                      </span>
+                    </span>
                   </button>
                 );
               })}
             </div>
+            {fieldOption ? (
+              <p className="mt-3 max-w-2xl text-xs text-white/85">
+                <strong>Piraten:</strong> Gewinner ist eine andere Nation als die genannten Mannschaften (höhere Quote).
+              </p>
+            ) : null}
           </section>
-
-          {fieldOption ? (
-            <section>
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-white/90">Alle anderen</h3>
-              <button
-                type="button"
-                onClick={() => selectOption(fieldOption.id)}
-                className={`w-full cursor-pointer rounded-lg border p-4 text-left transition sm:max-w-md ${
-                  selectedId === fieldOption.id
-                    ? "border-blue-600 bg-blue-50 ring-2 ring-blue-500/40"
-                    : "border-white/30 bg-white/95 hover:border-blue-400 hover:bg-blue-50/70"
-                }`}
-              >
-                <p className="font-medium text-zinc-900">{fieldOption.label}</p>
-                <p className="mt-1 text-lg font-semibold text-blue-700">{fieldOption.odds.toFixed(2)}</p>
-                <p className="mt-2 text-xs text-zinc-600">
-                  Gewinner kommt aus einer anderen Nation als die oben genannten Favoriten.
-                </p>
-              </button>
-            </section>
-          ) : null}
         </div>
       ) : null}
 
@@ -217,13 +222,20 @@ export function WmWinnerBoard({
             </div>
 
             {!selectedOption ? (
-              <p className="mt-4 text-sm text-zinc-600">Keine Auswahl. Klicke auf eine Mannschaft oder „Alle anderen“.</p>
+              <p className="mt-4 text-sm text-zinc-600">Keine Auswahl. Klicke auf eine Mannschaft oder „Piraten“.</p>
             ) : (
               <ul className="mt-4 space-y-2">
                 <li className="rounded-md border p-3">
                   <p className="text-sm text-zinc-600">WM Sieger 2026</p>
-                  <p className="font-medium">{selectedOption.label}</p>
-                  <p className="text-sm">Quote: {selectedOption.odds.toFixed(2)}</p>
+                  <p className="mt-1 flex w-full min-w-0 items-center justify-between gap-3 font-medium">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <WmWinnerFlag option={selectedOption} size="lg" />
+                      <span className="min-w-0">{wmWinnerDisplayLabel(selectedOption)}</span>
+                    </span>
+                    <span className="shrink-0 text-sm tabular-nums text-zinc-700">
+                      Quote {selectedOption.odds.toFixed(2)}
+                    </span>
+                  </p>
                   <button
                     type="button"
                     onClick={() => setSelectedId(null)}
@@ -244,7 +256,7 @@ export function WmWinnerBoard({
                 Quote: <span className="font-semibold">{selectedOption?.odds.toFixed(2) ?? "–"}</span>
               </p>
               <p className="text-sm">
-                Möglicher Gewinn (unkappt):{" "}
+                Mögliche Auszahlung (unkappt):{" "}
                 <span className="font-semibold">{selectedOption ? `${possibleWin} Punkte` : "–"}</span>
               </p>
               <p className="text-xs text-zinc-600">

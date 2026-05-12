@@ -77,16 +77,21 @@ export default async function DashboardPage() {
   const walletTransactions = transactions.filter((entry) => !entry.description.startsWith("Spielbudget"));
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+    <main
+      className="relative flex min-h-screen flex-1 items-start bg-cover bg-center bg-fixed bg-no-repeat"
+      style={{ backgroundImage: "url('/kicktipp-bg-2026.png')" }}
+    >
+      <div className="absolute inset-0 bg-black/45" />
+      <div className="relative mx-auto w-full max-w-5xl px-6 py-10">
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Dein Dashboard</h1>
-          <p className="text-white">Hallo {user.username ?? user.name}, hier findest du deinen aktuellen Stand.</p>
+          <h1 className="text-3xl font-bold text-white">Dein Dashboard</h1>
+          <p className="text-white">Hallo {user.username ?? user.email}, hier findest du deinen aktuellen Stand.</p>
         </div>
       </div>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <ProfileAvatarUpload name={user.username ?? user.name} avatarUrl={user.avatarUrl ?? null} />
+        <ProfileAvatarUpload name={user.username ?? user.email} avatarUrl={user.avatarUrl ?? null} />
         <article className="rounded-xl border bg-white p-5 text-zinc-900 shadow-sm">
           <h2 className="text-sm font-medium text-zinc-600">Punktekonto (Gewinne)</h2>
           <p className="mt-2 text-3xl font-semibold">{user.wallet?.balance ?? 0} Punkte</p>
@@ -105,6 +110,7 @@ export default async function DashboardPage() {
           awayTeam: bet.match.awayTeam,
           startsAt: bet.match.startsAt.toISOString(),
           marketTitle: bet.marketTitle,
+          marketType: bet.marketType,
           outcomeLabel: bet.outcomeLabel,
           oddsSnapshot: bet.oddsSnapshot,
           stake: bet.stake,
@@ -116,6 +122,7 @@ export default async function DashboardPage() {
           awayTeam: bet.match.awayTeam,
           startsAt: bet.match.startsAt.toISOString(),
           marketTitle: bet.marketTitle,
+          marketType: bet.marketType,
           outcomeLabel: bet.outcomeLabel,
           oddsSnapshot: bet.oddsSnapshot,
           stake: bet.stake,
@@ -141,6 +148,7 @@ export default async function DashboardPage() {
           type: entry.type,
         }))}
       />
+      </div>
     </main>
   );
 }

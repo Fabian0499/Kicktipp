@@ -9,10 +9,15 @@ import {
   cornersMatrixThresholdsFromOutcomes,
   formatCornersMatrixOutcomeLabel,
 } from "@/lib/corners-market";
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { netBetProfitFromGrossReturn } from "@/lib/bet-payout";
+import {
+  formatHandicapMatrixOutcomeLabel,
+  handicapMatrixLinesFromOutcomes,
+} from "@/lib/handicap-market";
+import { FormEvent, Fragment, useEffect, useMemo, useState } from "react";
+import { payoutFromGrossReturn } from "@/lib/bet-payout";
 import { profiBetConflictsOpenSet } from "@/lib/betting-conflicts";
 import { MIN_BETTABLE_ODDS, oddsViolateMinimumForMarket } from "@/lib/min-bettable-odds";
+import { profiMarketCategoryKey } from "@/lib/profi-market-category";
 
 const LEAGUE_MATCH_BET_BUDGET = 100;
 const KO_MATCH_BET_BUDGET = 200;
@@ -20,6 +25,58 @@ const LEAGUE_MAX_PAYOUT_PER_BET = 400;
 const KO_MAX_PAYOUT_PER_BET = 600;
 const LEAGUE_MAX_PAYOUT_PER_MATCH = 600;
 const KO_MAX_PAYOUT_PER_MATCH = 900;
+const BETS_VARIANT_STORAGE_KEY = "kicktipp-bets-variant";
+
+const COUNTRY_FLAG_ISO: Record<string, string> = {
+  Mexiko: "mx",
+  "Südafrika": "za",
+  "Republik Korea": "kr",
+  Tschechien: "cz",
+  Kanada: "ca",
+  "Bosnien und Herzegowina": "ba",
+  Katar: "qa",
+  Schweiz: "ch",
+  Brasilien: "br",
+  Marokko: "ma",
+  Haiti: "ht",
+  Schottland: "gb-sct",
+  USA: "us",
+  Paraguay: "py",
+  Australien: "au",
+  "Türkei": "tr",
+  Deutschland: "de",
+  "Curaçao": "cw",
+  "Elfenbeinküste": "ci",
+  Ecuador: "ec",
+  Niederlande: "nl",
+  Japan: "jp",
+  Schweden: "se",
+  Tunesien: "tn",
+  Belgien: "be",
+  "Ägypten": "eg",
+  "IR Iran": "ir",
+  Neuseeland: "nz",
+  Spanien: "es",
+  "Kap Verde": "cv",
+  "Saudi-Arabien": "sa",
+  Uruguay: "uy",
+  Frankreich: "fr",
+  Senegal: "sn",
+  Irak: "iq",
+  Norwegen: "no",
+  Argentinien: "ar",
+  Algerien: "dz",
+  "Österreich": "at",
+  Jordanien: "jo",
+  Portugal: "pt",
+  "DR Kongo": "cd",
+  Usbekistan: "uz",
+  Kolumbien: "co",
+  England: "gb",
+  Kroatien: "hr",
+  Ghana: "gh",
+  Panama: "pa",
+};
 
 type Option = {
   id: string;
@@ -38,6 +95,7 @@ type Match = {
   id: string;
   homeTeam: string;
   awayTeam: string;
+  groupCode: string | null;
   startsAt: string;
   isKnockout: boolean;
   markets: Market[];
@@ -56,14 +114,67 @@ type SelectedBet = {
 type PlacedBetInfo = {
   matchLabel: string;
   marketTitle: string;
+  marketType: string;
   outcome: string;
   odds: number;
   stake: number;
 };
 
+function flagIsoForTeam(team: string): string | null {
+  const normalized = team.trim();
+  return COUNTRY_FLAG_ISO[normalized] ?? null;
+}
+
+function sortExactScoreOptions<T extends { outcome: string }>(options: T[]): T[] {
+  return [...options].sort((a, b) => {
+    if (a.outcome === "X:X") {
+      return 1;
+    }
+    if (b.outcome === "X:X") {
+      return -1;
+    }
+    const [ha, aa] = a.outcome.split(":").map(Number);
+    const [hb, ab] = b.outcome.split(":").map(Number);
+    if (ha !== hb) {
+      return ha - hb;
+    }
+    return aa - ab;
+  });
+}
+
+function displayOutcomeLabel(marketType: string, outcome: string, homeLabel?: string, awayLabel?: string): string {
+  if (marketType === "HANDICAP_MATRIX") {
+    return formatHandicapMatrixOutcomeLabel(outcome, homeLabel, awayLabel);
+  }
+  return outcome;
+}
+
+function teamLabelsFromMatchLabel(matchLabel: string): [string | undefined, string | undefined] {
+  const [homeLabel, awayLabel] = matchLabel.split(" vs. ");
+  return [homeLabel || undefined, awayLabel || undefined];
+}
+
+function InfoTooltip({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-flex">
+      <span
+        tabIndex={0}
+        aria-label={text}
+        className="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-zinc-400 bg-white text-[10px] font-bold leading-none text-zinc-700"
+      >
+        ?
+      </span>
+      <span className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden w-64 -translate-x-1/2 whitespace-pre-line rounded-md border border-zinc-200 bg-white p-2 text-xs font-normal leading-snug text-zinc-800 shadow-lg group-hover:block group-focus-within:block">
+        {text}
+      </span>
+    </span>
+  );
+}
+
 export function BetsBoard({
   matches,
   isAuthenticated,
+  currentUserId,
   existingSimpleTipByMatch,
   openProfiBetsByMatch,
   usedStakeByMatch,
@@ -71,12 +182,14 @@ export function BetsBoard({
 }: {
   matches: Match[];
   isAuthenticated: boolean;
+  currentUserId: string | null;
   existingSimpleTipByMatch: Record<string, string>;
   openProfiBetsByMatch: Record<string, Array<{ marketType: string; outcomeLabel: string }>>;
   usedStakeByMatch: Record<string, number>;
   allocatedBudgetByMatch: Record<string, number>;
 }) {
-  const [variant, setVariant] = useState<"profi" | "einfach">("profi");
+  const [variant, setVariant] = useState<"profi" | "einfach">("einfach");
+  const [variantLoaded, setVariantLoaded] = useState(false);
   const [selections, setSelections] = useState<SelectedBet[]>([]);
   const [isSlipOpen, setIsSlipOpen] = useState(false);
   const [expandedMatchIds, setExpandedMatchIds] = useState<string[]>([]);
@@ -98,6 +211,25 @@ export function BetsBoard({
   useEffect(() => {
     setLocalOpenProfiBetsByMatch(openProfiBetsByMatch);
   }, [openProfiBetsByMatch]);
+
+  useEffect(() => {
+    const storageKey = currentUserId ? `${BETS_VARIANT_STORAGE_KEY}:${currentUserId}` : BETS_VARIANT_STORAGE_KEY;
+    const saved = window.localStorage.getItem(storageKey);
+    if (saved === "einfach" || saved === "profi") {
+      setVariant(saved);
+    } else {
+      setVariant("einfach");
+    }
+    setVariantLoaded(true);
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!variantLoaded) {
+      return;
+    }
+    const storageKey = currentUserId ? `${BETS_VARIANT_STORAGE_KEY}:${currentUserId}` : BETS_VARIANT_STORAGE_KEY;
+    window.localStorage.setItem(storageKey, variant);
+  }, [currentUserId, variant, variantLoaded]);
 
   useEffect(() => {
     setLocalSimpleTipByMatch(existingSimpleTipByMatch);
@@ -151,6 +283,12 @@ export function BetsBoard({
     );
   }
 
+  function isProfiCategoryAlreadyUsed(matchId: string, marketType: string): boolean {
+    const key = profiMarketCategoryKey(marketType);
+    const open = localOpenProfiBetsByMatch[matchId] ?? [];
+    return open.some((b) => profiMarketCategoryKey(b.marketType) === key);
+  }
+
   const canSubmitStake = useMemo(() => {
     const value = Number(stake);
     if (!Number.isInteger(value) || value < 1 || remainingBudgetForSelectedMatch < 1) {
@@ -179,8 +317,19 @@ export function BetsBoard({
     }
     const grossReturn = Math.round(numericStake * combinedOdds);
     const cappedReturn = Math.min(grossReturn, maxPayoutPerBet);
-    return netBetProfitFromGrossReturn(cappedReturn, numericStake);
+    return payoutFromGrossReturn(cappedReturn);
   }, [stake, combinedOdds, maxPayoutPerBet]);
+
+  const displayMatches = useMemo(() => {
+    return [...matches].sort((a, b) => {
+      const aCode = a.groupCode ?? "ZZ";
+      const bCode = b.groupCode ?? "ZZ";
+      if (aCode !== bCode) {
+        return aCode.localeCompare(bCode);
+      }
+      return new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
+    });
+  }, [matches]);
 
   async function placeBet(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -196,6 +345,12 @@ export function BetsBoard({
     if (pending && isProfiOptionBlocked(pending.matchId, pending.marketType, pending.outcome)) {
       setError(
         "Diese Auswahl ist nicht möglich: Zusammen mit deinen bereits offenen Tipps im selben Spiel würdest du alle Ausgänge abdecken (Absicherung ist nicht erlaubt).",
+      );
+      return;
+    }
+    if (pending && isProfiCategoryAlreadyUsed(pending.matchId, pending.marketType)) {
+      setError(
+        "Für dieses Spiel hast du bereits einen offenen Tipp in dieser Wett-Kategorie (z. B. zählen alle Über-/Unter-Tore als eine Kategorie). Pro Spiel ist nur ein offener Tipp pro Kategorie erlaubt.",
       );
       return;
     }
@@ -233,6 +388,7 @@ export function BetsBoard({
         ? {
             matchLabel: placedSelection.matchLabel,
             marketTitle: placedSelection.marketTitle,
+            marketType: placedSelection.marketType,
             outcome: placedSelection.outcome,
             odds: placedSelection.odds,
             stake: placedStake,
@@ -264,11 +420,12 @@ export function BetsBoard({
   function toggleSelection(selection: SelectedBet) {
     setError("");
     setMessage("");
-    setIsSlipOpen(true);
     setSelections((current) => {
       if (current.some((item) => item.optionId === selection.optionId)) {
+        setIsSlipOpen(false);
         return current.filter((item) => item.optionId !== selection.optionId);
       }
+      setIsSlipOpen(true);
       return [selection];
     });
   }
@@ -381,11 +538,10 @@ export function BetsBoard({
               onClick={() => setVariant("profi")}
               className={`cursor-pointer rounded px-3 py-1.5 ${variant === "profi" ? "bg-black text-white" : ""}`}
             >
-              Profi Variante
+              Profi-Variante
             </button>
           </div>
-
-          {matches.map((match) => {
+          {displayMatches.map((match, index) => {
             const totalBudget = allocatedBudgetByMatch[match.id] ?? (match.isKnockout ? KO_MATCH_BET_BUDGET : LEAGUE_MATCH_BET_BUDGET);
             const usedStake = localUsedStakeByMatch[match.id] ?? 0;
             const remainingBudget = Math.max(0, totalBudget - usedStake);
@@ -393,18 +549,14 @@ export function BetsBoard({
             const simpleExactStake = match.isKnockout ? 60 : 20;
             const simpleTotalStake = simpleOneXTwoStake + simpleExactStake;
             const goalMarkets = match.markets.filter((market) => market.type.startsWith("OVER_UNDER_"));
-            const halfTimeOneXTwoMarkets = match.markets.filter(
-              (market) => market.type === "HALF_TIME_ONE_X_TWO",
-            );
             const halfTimeFullTimeMarkets = match.markets.filter(
               (market) => market.type === "HALF_TIME_FULL_TIME",
             );
             const exactScoreMarkets = match.markets.filter((market) => market.type === "EXACT_SCORE");
-            const combinedOutcomeMarkets = match.markets.filter(
-              (market) => market.type === "ONE_X_TWO" || market.type === "DOUBLE_CHANCE",
-            );
+            const combinedOutcomeMarkets = match.markets.filter((market) => market.type === "ONE_X_TWO");
             const qualifyMarkets = match.markets.filter((market) => market.type === "TO_QUALIFY");
             const bttsMarkets = match.markets.filter((market) => market.type === "BOTH_TEAMS_TO_SCORE");
+            const handicapMatrixMarkets = match.markets.filter((market) => market.type === "HANDICAP_MATRIX");
             const cardsMatrixMarkets = match.markets.filter((market) => market.type === "CARDS_MATRIX");
             const cornersMatrixMarkets = match.markets.filter((market) => market.type === "CORNERS_MATRIX");
             const regularMarkets = match.markets.filter(
@@ -417,28 +569,76 @@ export function BetsBoard({
                 market.type !== "EXACT_SCORE" &&
                 market.type !== "TO_QUALIFY" &&
                 market.type !== "BOTH_TEAMS_TO_SCORE" &&
+                market.type !== "HANDICAP_MATRIX" &&
                 market.type !== "CARDS_MATRIX" &&
                 market.type !== "CORNERS_MATRIX",
             );
             const profiBudgetEmpty = remainingBudget < 1;
+            const previous = index > 0 ? displayMatches[index - 1] : null;
+            const showGroupHeader = match.groupCode !== (previous?.groupCode ?? null);
+            const groupHeading = match.groupCode ? `Gruppe ${match.groupCode}` : "Weitere Spiele";
+
+            const isExpanded = variant === "einfach" || expandedMatchIds.includes(match.id);
 
             return (
-              <article key={match.id} className="rounded-xl border bg-white p-6 text-zinc-900 shadow-sm">
-              <button
-                type="button"
-                onClick={() => toggleMatchExpansion(match.id)}
-                className="flex w-full cursor-pointer items-center justify-between text-left"
+              <Fragment key={match.id}>
+              {showGroupHeader ? (
+                <h2 className="pt-2 text-xl font-bold text-white">{groupHeading}</h2>
+              ) : null}
+              <div className={variant === "einfach" ? "rounded-xl border bg-white p-6 text-zinc-900 shadow-sm" : ""}>
+              <article
+                className={
+                  variant === "profi"
+                    ? "min-h-[9rem] cursor-pointer rounded-xl border bg-white p-6 text-zinc-900 shadow-sm"
+                    : "text-zinc-900"
+                }
+                onClick={variant === "profi" ? () => toggleMatchExpansion(match.id) : undefined}
+                onKeyDown={
+                  variant === "profi"
+                    ? (event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          toggleMatchExpansion(match.id);
+                        }
+                      }
+                    : undefined
+                }
+                role={variant === "profi" ? "button" : undefined}
+                tabIndex={variant === "profi" ? 0 : undefined}
+                aria-expanded={variant === "profi" ? isExpanded : undefined}
               >
+              <div className="flex w-full items-center justify-between text-left">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-2xl font-semibold">
-                      {match.homeTeam} vs. {match.awayTeam}
-                    </h2>
-                    {variant === "einfach" && localSimpleTipByMatch[match.id] ? (
-                      <span className="rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800">
-                        Tipp abgegeben: {localSimpleTipByMatch[match.id]}
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="flex items-center gap-2">
+                          {flagIsoForTeam(match.homeTeam) ? (
+                            <img
+                              src={`https://flagcdn.com/w40/${flagIsoForTeam(match.homeTeam)}.png`}
+                              alt=""
+                              className="h-5 w-7 rounded-sm object-cover ring-1 ring-zinc-300"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          ) : null}
+                          {match.homeTeam}
+                        </span>
+                        <span>vs.</span>
+                        <span className="flex items-center gap-2">
+                          {flagIsoForTeam(match.awayTeam) ? (
+                            <img
+                              src={`https://flagcdn.com/w40/${flagIsoForTeam(match.awayTeam)}.png`}
+                              alt=""
+                              className="h-5 w-7 rounded-sm object-cover ring-1 ring-zinc-300"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          ) : null}
+                          {match.awayTeam}
+                        </span>
                       </span>
-                    ) : null}
+                    </h2>
                     {variant === "profi" ? (
                       <span className="rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-900">
                         Verfügbare Punkte: {remainingBudget}
@@ -454,31 +654,39 @@ export function BetsBoard({
                   <p className="mt-1 text-sm text-zinc-600">
                     Anstoß: {new Date(match.startsAt).toLocaleString("de-DE")}
                   </p>
-                  <p className="mt-1 text-xs text-zinc-600">
-                    Spielbudget: {remainingBudget}/{totalBudget} Punkte verbleibend {match.isKnockout ? "(KO)" : ""}
-                  </p>
                 </div>
-                <span className="text-sm font-medium text-zinc-600">
-                  {expandedMatchIds.includes(match.id) ? "Ausblenden" : "Quoten anzeigen"}
-                </span>
-              </button>
+                {variant === "profi" ? (
+                  <span className="text-sm font-medium text-zinc-600">
+                    {expandedMatchIds.includes(match.id) ? "Ausblenden" : "Quoten anzeigen"}
+                  </span>
+                ) : null}
+              </div>
+              </article>
 
-              {expandedMatchIds.includes(match.id) ? (
-                <div className="mt-4 space-y-3">
+              {isExpanded ? (
+                <div className={variant === "einfach" ? "mt-4 space-y-3" : "mt-3 space-y-3"}>
                   {variant === "einfach" ? (
-                    <section className="rounded-md border p-4">
+                    <section className="rounded-md border bg-white p-4">
                       {(() => {
                         const hasSimpleTip = Boolean(localSimpleTipByMatch[match.id]);
                         return (
                           <>
-                      <h3 className="font-semibold">Billo-Variante: Ergebnistipp</h3>
-                      <p className="mt-1 text-sm text-zinc-600">
-                        Gib nur das Endergebnis ein. Intern werden automatisch {simpleOneXTwoStake} Punkte auf 1X2 und{" "}
-                        {simpleExactStake} Punkte auf Exact Score gesetzt.
-                      </p>
                       <div className="mt-3 flex flex-wrap items-end gap-2">
                         <div>
-                          <label className="block text-xs text-zinc-600">{match.homeTeam}</label>
+                          <label className="block text-xs text-zinc-600">
+                            <span className="flex items-center gap-1.5">
+                              {flagIsoForTeam(match.homeTeam) ? (
+                                <img
+                                  src={`https://flagcdn.com/w20/${flagIsoForTeam(match.homeTeam)}.png`}
+                                  alt=""
+                                  className="h-3.5 w-5 rounded-[2px] object-cover ring-1 ring-zinc-300"
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              ) : null}
+                              {match.homeTeam}
+                            </span>
+                          </label>
                           <input
                             type="number"
                             min={0}
@@ -499,7 +707,20 @@ export function BetsBoard({
                         </div>
                         <span className="pb-2 font-semibold">:</span>
                         <div>
-                          <label className="block text-xs text-zinc-600">{match.awayTeam}</label>
+                          <label className="block text-xs text-zinc-600">
+                            <span className="flex items-center gap-1.5">
+                              {flagIsoForTeam(match.awayTeam) ? (
+                                <img
+                                  src={`https://flagcdn.com/w20/${flagIsoForTeam(match.awayTeam)}.png`}
+                                  alt=""
+                                  className="h-3.5 w-5 rounded-[2px] object-cover ring-1 ring-zinc-300"
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              ) : null}
+                              {match.awayTeam}
+                            </span>
+                          </label>
                           <input
                             type="number"
                             min={0}
@@ -518,7 +739,6 @@ export function BetsBoard({
                             className="w-20 rounded-md border border-zinc-300 px-2 py-1 disabled:cursor-not-allowed disabled:bg-zinc-100"
                           />
                         </div>
-                        <p className="pb-2 text-sm font-medium text-zinc-700">Auto-Einsatz: {simpleTotalStake} Punkte</p>
                         <button
                           type="button"
                           disabled={
@@ -538,6 +758,11 @@ export function BetsBoard({
                               ? "Speichert..."
                               : "Tipp platzieren"}
                         </button>
+                        {hasSimpleTip ? (
+                          <p className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-base font-semibold text-blue-900">
+                            Du hast getippt: {localSimpleTipByMatch[match.id]}
+                          </p>
+                        ) : null}
                         {simpleSuccessByMatch[match.id] ? (
                           <p className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 text-sm text-emerald-800">
                             {simpleSuccessByMatch[match.id]}
@@ -553,17 +778,22 @@ export function BetsBoard({
                   {variant === "profi" ? (
                     <>
                   {combinedOutcomeMarkets.length > 0 ? (
-                    <section className="rounded-md border p-3">
-                      <h3 className="font-semibold">1X2 / Doppelte Chance</h3>
+                    <section className="rounded-md border bg-white p-3">
+                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                        1X2
+                        <InfoTooltip text={"Wie wird der Ausgang des Spiels sein?\n1 = Heimteam gewinnt\nX = Unentschieden\n2 = Auswärtsteam gewinnt"} />
+                      </h3>
                       <div className="mt-3 space-y-3">
                         {combinedOutcomeMarkets.map((market) => (
-                          <div key={market.id} className="rounded-md border bg-zinc-50 p-3">
-                            <p className="text-sm font-medium text-zinc-700">{market.title}</p>
+                          <div key={market.id} className="rounded-md border bg-white p-3">
+                            <p className="text-sm font-medium text-black">{market.title}</p>
                             <div className="mt-2 grid gap-2 md:grid-cols-3">
                               {market.options.map((option) => {
                                 const isSelected = selections.some((item) => item.optionId === option.id);
                                 const pickBlocked =
-                                  isProfiOptionBlocked(match.id, market.type, option.outcome) || profiBudgetEmpty;
+                                  isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                                  isProfiCategoryAlreadyUsed(match.id, market.type) ||
+                                  profiBudgetEmpty;
                                 return (
                                   <button
                                     key={option.id}
@@ -607,10 +837,13 @@ export function BetsBoard({
                   ) : null}
 
                   {qualifyMarkets.length > 0 ? (
-                    <section className="rounded-md border p-3">
-                      <h3 className="font-semibold">Qualifiziert sich</h3>
+                    <section className="rounded-md border bg-white p-3">
+                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                        Qualifiziert sich
+                        <InfoTooltip text={"Wer kommt in die nächste Runde?\n\nBEISPIEL\nMarkt: Qualifiziert sich\nAuswahl: Heimteam (1)\n\nWenn es nach der regulären Spielzeit unentschieden steht, zählt auch Verlängerung und Elfmeterschießen. Die Wette gewinnt, wenn deine ausgewählte Mannschaft am Ende weiterkommt."} />
+                      </h3>
                       <p className="mt-1 text-xs text-zinc-600">
-                        Wer zieht nach dem eingetragenen Ergebnis in die nächste Runde ein (K.-o.).
+                        Wer zieht in die nächste Runde ein?
                       </p>
                       <div className="mt-3 space-y-3">
                         {qualifyMarkets.map((market) => (
@@ -620,6 +853,7 @@ export function BetsBoard({
                                 const isSelected = selections.some((item) => item.optionId === option.id);
                                 const pickBlocked =
                                   isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                                  isProfiCategoryAlreadyUsed(match.id, market.type) ||
                                   profiBudgetEmpty;
                                 const label =
                                   option.outcome === "1"
@@ -670,17 +904,22 @@ export function BetsBoard({
                   ) : null}
 
                   {bttsMarkets.length > 0 ? (
-                    <section className="rounded-md border p-3">
-                      <h3 className="font-semibold">Beide Teams treffen</h3>
+                    <section className="rounded-md border bg-white p-3">
+                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                        Beide Teams treffen
+                        <InfoTooltip text={"Entscheide, ob beide Mannschaften ein Tor erzielen oder nicht. Es spielt keine Rolle, wer als Sieger oder Verlierer des Spiels hervorgeht.\n\nBEISPIEL\nMarkt: Treffen beide?\nAuswahl: Ja\n\nIn diesem Beispiel wettest du, dass beide Mannschaften im gesamten Spiel mindestens ein Tor schießen. Um die Wette zu gewinnen, müssen mindestens 2 Tore erzielt werden."} />
+                      </h3>
                       <div className="mt-3 space-y-3">
                         {bttsMarkets.map((market) => (
-                          <div key={market.id} className="rounded-md border bg-zinc-50 p-3">
-                            <p className="text-sm font-medium text-zinc-700">{market.title}</p>
+                          <div key={market.id} className="rounded-md border bg-white p-3">
+                            <p className="text-sm font-medium text-black">{market.title}</p>
                             <div className="mt-2 grid gap-2 md:grid-cols-3">
                               {market.options.map((option) => {
                                 const isSelected = selections.some((item) => item.optionId === option.id);
                                 const pickBlocked =
-                                  isProfiOptionBlocked(match.id, market.type, option.outcome) || profiBudgetEmpty;
+                                  isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                                  isProfiCategoryAlreadyUsed(match.id, market.type) ||
+                                  profiBudgetEmpty;
                                 return (
                                   <button
                                     key={option.id}
@@ -724,17 +963,22 @@ export function BetsBoard({
                   ) : null}
 
                   {goalMarkets.length > 0 ? (
-                    <section className="rounded-md border p-3">
-                      <h3 className="font-semibold">Über / Unter Tore</h3>
+                    <section className="rounded-md border bg-white p-3">
+                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                        Über / Unter Tore
+                        <InfoTooltip text={"Wähle, ob die Gesamtzahl der von beiden Mannschaften erzielten Tore über (+) oder unter (-) einer bestimmten Anzahl von Toren liegen wird. Der Gewinner und der Verlierer des Spiels spielen keine Rolle.\n\nBEISPIEL\nMarkt: Über/Unter (2,5)\nAuswahl: Über 2,5\n\nIn diesem Beispiel wettest du, dass im Spiel über (+) 2.5 Tore fallen werden. Dies bedeutet, dass mindestens 3 Tore geschossen werden müssen."} />
+                      </h3>
                       <div className="mt-3 space-y-3">
                         {goalMarkets.map((market) => (
-                          <div key={market.id} className="rounded-md border bg-zinc-50 p-3">
-                            <p className="text-sm font-medium text-zinc-700">{market.title}</p>
+                          <div key={market.id} className="rounded-md border bg-white p-3">
+                            <p className="text-sm font-medium text-black">{market.title}</p>
                             <div className="mt-2 grid gap-2 md:grid-cols-2">
                               {market.options.map((option) => {
                                 const isSelected = selections.some((item) => item.optionId === option.id);
                                 const pickBlocked =
-                                  isProfiOptionBlocked(match.id, market.type, option.outcome) || profiBudgetEmpty;
+                                  isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                                  isProfiCategoryAlreadyUsed(match.id, market.type) ||
+                                  profiBudgetEmpty;
                                 return (
                                   <button
                                     key={option.id}
@@ -777,72 +1021,122 @@ export function BetsBoard({
                     </section>
                   ) : null}
 
-                  {halfTimeOneXTwoMarkets.length > 0 ? (
-                    <section className="rounded-md border p-3">
-                      <h3 className="font-semibold">Halbzeit 1X2</h3>
-                      <div className="mt-3 space-y-3">
-                        {halfTimeOneXTwoMarkets.map((market) => (
-                          <div key={market.id} className="rounded-md border bg-zinc-50 p-3">
-                            <p className="text-sm font-medium text-zinc-700">{market.title}</p>
-                            <div className="mt-2 grid gap-2 md:grid-cols-3">
-                              {market.options.map((option) => {
-                                const isSelected = selections.some((item) => item.optionId === option.id);
-                                const pickBlocked =
-                                  isProfiOptionBlocked(match.id, market.type, option.outcome) || profiBudgetEmpty;
-                                return (
-                                  <button
-                                    key={option.id}
-                                    type="button"
-                                    disabled={
-                                      !isAuthenticated ||
-                                      oddsViolateMinimumForMarket(market.type, option.odds) ||
-                                      (pickBlocked && !isSelected)
-                                    }
-                                    onClick={() =>
-                                      toggleSelection({
-                                        matchId: match.id,
-                                        matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
-                                        marketTitle: market.title,
-                                        marketType: market.type,
-                                        optionId: option.id,
-                                        outcome: option.outcome,
-                                        odds: option.odds,
-                                      })
-                                    }
-                                    className={`rounded-md border p-2 text-left ${
-                                      isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
-                                    } ${
-                                      isAuthenticated &&
-                                      !oddsViolateMinimumForMarket(market.type, option.odds) &&
-                                      (!pickBlocked || isSelected)
-                                        ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
-                                        : "cursor-not-allowed opacity-70"
-                                    }`}
-                                  >
-                                    <p className="text-sm text-zinc-700">{option.outcome}</p>
-                                    <p className="text-lg font-semibold text-blue-700">{option.odds.toFixed(2)}</p>
-                                  </button>
-                                );
-                              })}
+                  {handicapMatrixMarkets.length > 0 ? (
+                    <section className="rounded-md border bg-white p-3">
+                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                        Handicap
+                        <InfoTooltip text={"Beim Handicap gibst du einer Mannschaft einen imaginären Vorsprung.\n\nBEISPIEL\nMarkt: Handicap (0:1)\nAuswahl: 1 (Heim)\n\nIn diesem Beispiel hat Team 2 einen 1-Tore-Vorsprung. Demzufolge muss Team 1 das Spiel mit mindestens 2 Toren Unterschied gewinnen, um auch die Handicapwette zu gewinnen."} />
+                      </h3>
+                      <div className="mt-3 space-y-4">
+                        {handicapMatrixMarkets.map((market) => {
+                          const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
+                          const handicapLines = handicapMatrixLinesFromOutcomes(market.options.map((o) => o.outcome));
+                          return (
+                            <div key={market.id} className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
+                              <table className="w-full min-w-[28rem] border-collapse text-sm">
+                                <thead>
+                                  <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
+                                    <th className="px-2 py-2 font-semibold text-black">Handicap</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Heim ({match.homeTeam})</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Unentschieden</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Auswärts ({match.awayTeam})</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {handicapLines.map((line) => (
+                                    <tr
+                                      key={`${line.homeHandicap}:${line.awayHandicap}`}
+                                      className="border-b border-zinc-100"
+                                    >
+                                      <td className="px-2 py-1.5 font-medium tabular-nums text-black">
+                                        {line.homeHandicap}:{line.awayHandicap}
+                                      </td>
+                                      {(["1", "X", "2"] as const).map((outcome) => {
+                                        const option = byOutcome.get(
+                                          `HANDICAP:${line.homeHandicap}:${line.awayHandicap}:${outcome}`,
+                                        );
+                                        if (!option) {
+                                          return (
+                                            <td key={outcome} className="px-1 py-1">
+                                              –
+                                            </td>
+                                          );
+                                        }
+                                        const isSelected = selections.some((item) => item.optionId === option.id);
+                                        const pickBlocked =
+                                          isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                                          isProfiCategoryAlreadyUsed(match.id, market.type) ||
+                                          profiBudgetEmpty;
+                                        return (
+                                          <td key={outcome} className="px-1 py-1 align-top">
+                                            <button
+                                              type="button"
+                                              disabled={
+                                                !isAuthenticated ||
+                                                oddsViolateMinimumForMarket(market.type, option.odds) ||
+                                                (pickBlocked && !isSelected)
+                                              }
+                                              onClick={() =>
+                                                toggleSelection({
+                                                  matchId: match.id,
+                                                  matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                                  marketTitle: market.title,
+                                                  marketType: market.type,
+                                                  optionId: option.id,
+                                                  outcome: option.outcome,
+                                                  odds: option.odds,
+                                                })
+                                              }
+                                              title={formatHandicapMatrixOutcomeLabel(
+                                                option.outcome,
+                                                match.homeTeam,
+                                                match.awayTeam,
+                                              )}
+                                              className={`w-full min-h-[3rem] rounded-md border px-2 py-1.5 text-left ${
+                                                isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
+                                              } ${
+                                                isAuthenticated &&
+                                                !oddsViolateMinimumForMarket(market.type, option.odds) &&
+                                                (!pickBlocked || isSelected)
+                                                  ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
+                                                  : "cursor-not-allowed opacity-70"
+                                              }`}
+                                            >
+                                              <p className="text-lg font-semibold leading-tight text-blue-700">
+                                                {option.odds.toFixed(2)}
+                                              </p>
+                                            </button>
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </section>
                   ) : null}
 
                   {halfTimeFullTimeMarkets.length > 0 ? (
-                    <section className="rounded-md border p-3">
-                      <h3 className="font-semibold">Halbzeit / Endstand</h3>
+                    <section className="rounded-md border bg-white p-3">
+                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                        Halbzeit / Endstand
+                        <InfoTooltip text={"Bei dieser Wette tippst du, wie die Halbzeit und das Spiel ausgehen. Beide Ergebnissse müssen korrekt sein, damit du gewinnst.\n\nBEISPIEL\nMarkt: Halbzeit/Endstand\nAuswahl: 1:1\n\nIn diesem Beispiel wettest du, dass das Heimteam die 1. Halbzeit gewinnt und das Heimteam das Spiel."} />
+                      </h3>
                       <div className="mt-3 space-y-3">
                         {halfTimeFullTimeMarkets.map((market) => (
-                          <div key={market.id} className="rounded-md border bg-zinc-50 p-3">
-                            <p className="text-sm font-medium text-zinc-700">{market.title}</p>
+                          <div key={market.id} className="rounded-md border bg-white p-3">
+                            <p className="text-sm font-medium text-black">{market.title}</p>
                             <div className="mt-2 grid gap-2 md:grid-cols-3">
                               {market.options.map((option) => {
                                 const isSelected = selections.some((item) => item.optionId === option.id);
                                 const pickBlocked =
-                                  isProfiOptionBlocked(match.id, market.type, option.outcome) || profiBudgetEmpty;
+                                  isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                                  isProfiCategoryAlreadyUsed(match.id, market.type) ||
+                                  profiBudgetEmpty;
                                 return (
                                   <button
                                     key={option.id}
@@ -886,8 +1180,11 @@ export function BetsBoard({
                   ) : null}
 
                   {cornersMatrixMarkets.length > 0 ? (
-                    <section className="rounded-md border p-3">
-                      <h3 className="font-semibold">Hjornespark</h3>
+                    <section className="rounded-md border bg-white p-3">
+                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                        Hjornespark
+                        <InfoTooltip text={"Hier tippst du auf die Gesamtzahl der Hjornespark im Spiel: Unter, genau die Anzahl, oder Über.\n\nBEISPIEL\nMarkt: Hjornespark\nAuswahl: Über 6\n\nIn diesem Beispiel wettest du, dass im Spiel mehr als 6 Hjornespark ausgeführt werden. Um die Wette zu gewinnen, müssen mindestens 7 Hjornespark entstehen."} />
+                      </h3>
                       <p className="mt-1 text-xs text-zinc-600">
                         Gesamtzahl Hjornespark – Auswertung wie vom Spielbetreiber eingetragen. Zeile 0 ohne „Unter“.
                       </p>
@@ -908,16 +1205,16 @@ export function BetsBoard({
                               <table className="w-full min-w-[28rem] border-collapse text-sm">
                                 <thead>
                                   <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
-                                    <th className="px-2 py-2 font-semibold">N</th>
-                                    <th className="px-2 py-2 font-semibold">Unter</th>
-                                    <th className="px-2 py-2 font-semibold">Exakt</th>
-                                    <th className="px-2 py-2 font-semibold">Über</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Anzahl</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Unter</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Exakt</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Über</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {rows.map((row) => (
                                     <tr key={row.n} className="border-b border-zinc-100">
-                                      <td className="px-2 py-1.5 font-medium tabular-nums">{row.n}</td>
+                                      <td className="px-2 py-1.5 font-medium tabular-nums text-black">{row.n}</td>
                                       {(["unter", "exakt", "uber"] as const).map((col) => {
                                         const option = row[col];
                                         if (!option) {
@@ -930,6 +1227,7 @@ export function BetsBoard({
                                         const isSelected = selections.some((item) => item.optionId === option.id);
                                         const pickBlocked =
                                           isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                                          isProfiCategoryAlreadyUsed(match.id, market.type) ||
                                           profiBudgetEmpty;
                                         return (
                                           <td key={col} className="px-1 py-1 align-top">
@@ -981,8 +1279,11 @@ export function BetsBoard({
                   ) : null}
 
                   {cardsMatrixMarkets.length > 0 ? (
-                    <section className="rounded-md border p-3">
-                      <h3 className="font-semibold">Kort</h3>
+                    <section className="rounded-md border bg-white p-3">
+                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                        Kort
+                        <InfoTooltip text={"Hier tippst du auf die Gesamtzahl der Kort nach eurer Zählregel: Unter, genau die Anzahl, oder Über.\n\nBEISPIEL\nMarkt: Kort\nAuswahl: Über 4\n\nIn diesem Beispiel wettest du, dass im Spiel mehr als 4 Kort gezählt werden. Um die Wette zu gewinnen, müssen mindestens 5 Kort entstehen."} />
+                      </h3>
                       <p className="mt-1 text-xs text-zinc-600">
                         Gesamtzahl Kort – Auswertung wie vom Spielbetreiber eingetragen. Bei kleinster Schwelle N = 0
                         kein „Unter“ in dieser Zeile.
@@ -1004,16 +1305,16 @@ export function BetsBoard({
                               <table className="w-full min-w-[28rem] border-collapse text-sm">
                                 <thead>
                                   <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
-                                    <th className="px-2 py-2 font-semibold">N</th>
-                                    <th className="px-2 py-2 font-semibold">Unter</th>
-                                    <th className="px-2 py-2 font-semibold">Exakt</th>
-                                    <th className="px-2 py-2 font-semibold">Über</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Anzahl</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Unter</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Exakt</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Über</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {rows.map((row) => (
                                     <tr key={row.n} className="border-b border-zinc-100">
-                                      <td className="px-2 py-1.5 font-medium tabular-nums">{row.n}</td>
+                                      <td className="px-2 py-1.5 font-medium tabular-nums text-black">{row.n}</td>
                                       {(["unter", "exakt", "uber"] as const).map((col) => {
                                         const option = row[col];
                                         if (!option) {
@@ -1026,6 +1327,7 @@ export function BetsBoard({
                                         const isSelected = selections.some((item) => item.optionId === option.id);
                                         const pickBlocked =
                                           isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                                          isProfiCategoryAlreadyUsed(match.id, market.type) ||
                                           profiBudgetEmpty;
                                         return (
                                           <td key={col} className="px-1 py-1 align-top">
@@ -1077,13 +1379,15 @@ export function BetsBoard({
                   ) : null}
 
                   {regularMarkets.map((market) => (
-                    <section key={market.id} className="rounded-md border p-3">
-                      <h3 className="font-semibold">{market.title}</h3>
+                    <section key={market.id} className="rounded-md border bg-white p-3">
+                      <h3 className="font-semibold text-black">{market.title}</h3>
                       <div className="mt-2 grid gap-2 md:grid-cols-3">
                         {market.options.map((option) => {
                           const isSelected = selections.some((item) => item.optionId === option.id);
                           const pickBlocked =
-                            isProfiOptionBlocked(match.id, market.type, option.outcome) || profiBudgetEmpty;
+                            isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                            isProfiCategoryAlreadyUsed(match.id, market.type) ||
+                            profiBudgetEmpty;
                           return (
                             <button
                               key={option.id}
@@ -1124,21 +1428,26 @@ export function BetsBoard({
                   ))}
 
                   {exactScoreMarkets.length > 0 ? (
-                    <section className="rounded-md border p-3">
-                      <h3 className="font-semibold">Exact Score (0:0 bis 3:3)</h3>
+                    <section className="rounded-md border bg-white p-3">
+                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                        Exact Score (0:0 bis 4:4)
+                        <InfoTooltip text={"Bei der Ergebniswette, tippst du auf den korrekten Endstand eines Spiels.\n\nBEISPIEL\nMarkt: Ergebnis\nAuswahl: 2:0\n\nX:X steht für jedes nicht angebotene Ergebnis."} />
+                      </h3>
                       <p className="mt-1 text-xs text-zinc-600">
-                        <strong>X:X</strong> steht für <strong>exakt 3:3</strong> und für <strong>jedes andere</strong>{" "}
-                        Ergebnis außerhalb der Matrix 0:0–3:3.
+                        <strong>X:X</strong> ist die Sammelquote für Ergebnisse, bei denen mindestens eine Mannschaft{" "}
+                        <strong>mehr als 4 Tore</strong> erzielt (außerhalb der Matrix 0:0–4:4).
                       </p>
                       <div className="mt-3 space-y-3">
                         {exactScoreMarkets.map((market) => (
-                          <div key={market.id} className="rounded-md border bg-zinc-50 p-3">
-                            <p className="text-sm font-medium text-zinc-700">{market.title}</p>
-                            <div className="mt-2 grid gap-2 md:grid-cols-4">
-                              {market.options.map((option) => {
+                          <div key={market.id} className="rounded-md border bg-white p-3">
+                            <p className="text-sm font-medium text-black">{market.title}</p>
+                            <div className="mt-2 grid gap-2 sm:grid-cols-5">
+                              {sortExactScoreOptions(market.options).map((option) => {
                                 const isSelected = selections.some((item) => item.optionId === option.id);
                                 const pickBlocked =
-                                  isProfiOptionBlocked(match.id, market.type, option.outcome) || profiBudgetEmpty;
+                                  isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                                  isProfiCategoryAlreadyUsed(match.id, market.type) ||
+                                  profiBudgetEmpty;
                                 return (
                                   <button
                                     key={option.id}
@@ -1184,7 +1493,8 @@ export function BetsBoard({
                   ) : null}
                 </div>
               ) : null}
-            </article>
+              </div>
+            </Fragment>
             );
           })}
         </div>
@@ -1227,7 +1537,12 @@ export function BetsBoard({
               <li key={selection.optionId} className="rounded-md border p-3">
                 <p className="text-sm text-zinc-600">{selection.matchLabel}</p>
                 <p className="font-medium">
-                  {selection.marketTitle}: {selection.outcome}
+                  {selection.marketTitle}:{" "}
+                  {displayOutcomeLabel(
+                    selection.marketType,
+                    selection.outcome,
+                    ...teamLabelsFromMatchLabel(selection.matchLabel),
+                  )}
                 </p>
                 <p className="text-sm">Quote: {selection.odds.toFixed(2)}</p>
                 <button
@@ -1259,8 +1574,7 @@ export function BetsBoard({
             Quote: <span className="font-semibold">{combinedOdds.toFixed(2)}</span>
           </p>
           <p className="text-sm">
-            Möglicher Nettogewinn (Punktekonto):{" "}
-            <span className="font-semibold">{possibleWin.toFixed(2)} Punkte</span>
+            Mögliche Auszahlung (Punktekonto): <span className="font-semibold">{possibleWin.toFixed(2)} Punkte</span>
           </p>
           <p className="text-xs text-zinc-600">
             Verbleibendes Budget im gewählten Spiel: {remainingBudgetForSelectedMatch} Punkte
@@ -1273,7 +1587,13 @@ export function BetsBoard({
             <div className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
               <p className="font-semibold">Folgende Wette wurde erfolgreich platziert:</p>
               <p className="mt-1">
-                {placedBetInfo.matchLabel} - {placedBetInfo.marketTitle}: {placedBetInfo.outcome} @{" "}
+                {placedBetInfo.matchLabel} - {placedBetInfo.marketTitle}:{" "}
+                {displayOutcomeLabel(
+                  placedBetInfo.marketType,
+                  placedBetInfo.outcome,
+                  ...teamLabelsFromMatchLabel(placedBetInfo.matchLabel),
+                )}{" "}
+                @{" "}
                 {placedBetInfo.odds.toFixed(2)}
               </p>
               <p>Einsatz: {placedBetInfo.stake} Punkte</p>
@@ -1348,8 +1668,8 @@ export function BetsBoard({
                 </span>
                 <span className="text-zinc-600">
                   Keine vollständige Absicherung: Kombinationen aus offenen Tipps im selben Spiel, die jedes mögliche
-                  Ergebnis abdecken würden (z.&nbsp;B. Über/Unter dieselbe Linie, oder 1X2 mit passender Doppelter
-                  Chance), sind nicht erlaubt.
+                  Ergebnis abdecken würden (z.&nbsp;B. Über/Unter dieselbe Linie, oder alle drei 1X2-Ausgänge gleichzeitig),
+                  sind nicht erlaubt.
                 </span>
               </li>
             </ul>

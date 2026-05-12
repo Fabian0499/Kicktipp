@@ -44,6 +44,5 @@ export async function POST(request: Request) {
     id: user.id,
     email: user.email,
     username: user.username,
-    name: user.name,
   });
 }

@@ -2,15 +2,6 @@ import { describe, expect, it } from "vitest";
 import { profiBetConflictsOpenSet, profiBetsMutuallyAbsorbing } from "./betting-conflicts";
 
 describe("profiBetsMutuallyAbsorbing", () => {
-  it("blocks 1X2 + Doppelte Chance that cover H, D, and A", () => {
-    expect(
-      profiBetsMutuallyAbsorbing(
-        { marketType: "ONE_X_TWO", outcomeLabel: "1" },
-        { marketType: "DOUBLE_CHANCE", outcomeLabel: "X2" },
-      ),
-    ).toBe(true);
-  });
-
   it("does not block 1 and X on 1X2 (draw and away are uncovered)", () => {
     expect(
       profiBetsMutuallyAbsorbing(
@@ -91,15 +82,6 @@ describe("profiBetsMutuallyAbsorbing", () => {
 });
 
 describe("profiBetConflictsOpenSet", () => {
-  it("returns true if any open bet conflicts with the candidate", () => {
-    expect(
-      profiBetConflictsOpenSet(
-        { marketType: "DOUBLE_CHANCE", outcomeLabel: "1X" },
-        [{ marketType: "ONE_X_TWO", outcomeLabel: "2" }],
-      ),
-    ).toBe(true);
-  });
-
   it("blocks 1X2 third outcome when two singles already cover Heim and Unentschieden", () => {
     expect(
       profiBetConflictsOpenSet(

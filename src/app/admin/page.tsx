@@ -2,6 +2,7 @@ import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { AdminWmWinner } from "@/components/admin-wm-winner";
 import { AdminMatchForm } from "@/components/admin-match-form";
+import { AdminMatchOddsEditor } from "@/components/admin-match-odds-editor";
 import { AdminPointsAdjustment } from "@/components/admin-points-adjustment";
 import { AdminResultSettlementSection } from "@/components/admin-result-settlement-section";
 import { AdminUserApprovals } from "@/components/admin-user-approvals";
@@ -20,6 +21,14 @@ export default async function AdminPage() {
   }
 
   const matches = await db.match.findMany({
+    include: {
+      markets: {
+        include: {
+          options: { orderBy: { createdAt: "asc" } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
     orderBy: { startsAt: "desc" },
   });
   const users = await db.user.findMany({
@@ -39,12 +48,38 @@ export default async function AdminPage() {
   });
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
+    <main
+      className="relative flex min-h-screen flex-1 items-start bg-cover bg-center bg-fixed bg-no-repeat"
+      style={{ backgroundImage: "url('/kicktipp-bg-2026.png')" }}
+    >
+      <div className="absolute inset-0 bg-black/45" />
+      <div className="relative mx-auto w-full max-w-5xl px-6 py-10">
       <h1 className="text-3xl font-bold text-white">Verwaltung</h1>
       <p className="mt-2 text-white">
         Hier legst du Spiele an und hinterlegst Quoten für die wichtigsten Wettmärkte.
       </p>
       <AdminMatchForm />
+      <AdminMatchOddsEditor
+        matches={matches
+          .filter((match) => !((match as unknown as { settledAt?: Date | null }).settledAt ?? null))
+          .map((match) => ({
+            id: match.id,
+            homeTeam: match.homeTeam,
+            awayTeam: match.awayTeam,
+            startsAt: match.startsAt.toISOString(),
+            settledAt: null,
+            markets: match.markets.map((market) => ({
+              id: market.id,
+              type: market.type,
+              title: market.title,
+              options: market.options.map((option) => ({
+                id: option.id,
+                outcome: option.outcome,
+                odds: option.odds,
+              })),
+            })),
+          }))}
+      />
       <AdminResultSettlementSection
         matches={matches.map((match) => ({
           id: match.id,
@@ -66,7 +101,7 @@ export default async function AdminPage() {
       <AdminUserApprovals
         users={pendingUsers.map((entry) => ({
           id: entry.id,
-          username: entry.username ?? entry.name,
+          username: entry.username ?? entry.email,
           email: entry.email,
           createdAt: entry.createdAt.toISOString(),
         }))}
@@ -74,7 +109,7 @@ export default async function AdminPage() {
       <AdminPointsAdjustment
         users={users.map((entry) => ({
           id: entry.id,
-          label: `${entry.username ?? entry.name} - ${entry.email}`,
+          label: `${entry.username ?? entry.email} - ${entry.email}`,
           balance: entry.wallet?.balance ?? 0,
         }))}
       />
@@ -99,6 +134,7 @@ export default async function AdminPage() {
           erscheint &quot;WM Sieger 2026&quot; wieder – Quoten kannst du im Formular anpassen.
         </p>
       )}
+      </div>
     </main>
   );
 }

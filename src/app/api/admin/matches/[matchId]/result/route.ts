@@ -4,8 +4,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { cardsMatrixOutcomeWins } from "@/lib/cards-market";
 import { cornersMatrixOutcomeWins } from "@/lib/corners-market";
+import { handicapMatrixOutcomeWins } from "@/lib/handicap-market";
 import { winningExactScoreOutcomes } from "@/lib/exact-score";
-import { netBetProfitFromGrossReturn } from "@/lib/bet-payout";
+import { payoutFromGrossReturn } from "@/lib/bet-payout";
 import { settleMatchSchema } from "@/lib/validation";
 
 const LEAGUE_MAX_PAYOUT_PER_BET = 400;
@@ -146,6 +147,8 @@ export async function POST(request: Request, context: { params: Promise<{ matchI
           won = cardsMatrixOutcomeWins(bet.outcomeLabel, totalCards);
         } else if ((bet.marketType as string) === "CORNERS_MATRIX") {
           won = cornersMatrixOutcomeWins(bet.outcomeLabel, totalCorners);
+        } else if ((bet.marketType as string) === "HANDICAP_MATRIX") {
+          won = handicapMatrixOutcomeWins(bet.outcomeLabel, homeScore, awayScore);
         } else {
           const winners = getWinningOutcomeLabels(
             bet.marketType,
@@ -170,10 +173,10 @@ export async function POST(request: Request, context: { params: Promise<{ matchI
 
         const rawReturn = Math.round(bet.stake * bet.oddsSnapshot);
         const cappedReturn = Math.min(rawReturn, maxPayoutPerBet);
-        const netProfit = netBetProfitFromGrossReturn(cappedReturn, bet.stake);
+        const grossPayout = payoutFromGrossReturn(cappedReturn);
         const alreadyCreditedForMatch = creditedByUser.get(bet.userId) ?? 0;
         const matchCapRemaining = Math.max(0, maxPayoutPerMatch - alreadyCreditedForMatch);
-        const payout = Math.min(netProfit, matchCapRemaining);
+        const payout = Math.min(grossPayout, matchCapRemaining);
 
         if (payout > 0) {
           await tx.wallet.upsert({

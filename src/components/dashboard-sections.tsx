@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { formatHandicapMatrixOutcomeLabel } from "@/lib/handicap-market";
 
 type BetRow = {
   id: string;
@@ -8,6 +9,7 @@ type BetRow = {
   awayTeam: string;
   startsAt: string;
   marketTitle: string;
+  marketType: string;
   outcomeLabel: string;
   oddsSnapshot: number;
   stake: number;
@@ -45,6 +47,13 @@ const DEFAULT_STATE: Record<SectionKey, boolean> = {
   "budget-history": false,
 };
 
+function displayOutcomeLabel(marketType: string, outcome: string, homeLabel?: string, awayLabel?: string): string {
+  if (marketType === "HANDICAP_MATRIX") {
+    return formatHandicapMatrixOutcomeLabel(outcome, homeLabel, awayLabel);
+  }
+  return outcome;
+}
+
 export function DashboardSections({
   openBets,
   closedBets,
@@ -70,7 +79,9 @@ export function DashboardSections({
       return;
     }
     const parsed = JSON.parse(raw) as Partial<Record<SectionKey, boolean>>;
-    setSectionState((prev) => ({ ...prev, ...parsed }));
+    queueMicrotask(() => {
+      setSectionState((prev) => ({ ...prev, ...parsed }));
+    });
   }, [loaded]);
 
   function onToggle(key: SectionKey, isOpen: boolean) {
@@ -99,7 +110,9 @@ export function DashboardSections({
                   {bet.homeTeam} vs. {bet.awayTeam}
                 </p>
                 <p className="text-sm text-zinc-700">
-                  {bet.marketTitle}: {bet.outcomeLabel} @ {bet.oddsSnapshot.toFixed(2)}
+                  {bet.marketTitle}:{" "}
+                  {displayOutcomeLabel(bet.marketType, bet.outcomeLabel, bet.homeTeam, bet.awayTeam)} @{" "}
+                  {bet.oddsSnapshot.toFixed(2)}
                 </p>
                 <p className="text-sm text-zinc-600">
                   Einsatz: {bet.stake} Punkte | Anstoß: {new Date(bet.startsAt).toLocaleString("de-DE")}
@@ -139,7 +152,9 @@ export function DashboardSections({
                   </span>
                 </div>
                 <p className="text-sm text-zinc-700">
-                  {bet.marketTitle}: {bet.outcomeLabel} @ {bet.oddsSnapshot.toFixed(2)}
+                  {bet.marketTitle}:{" "}
+                  {displayOutcomeLabel(bet.marketType, bet.outcomeLabel, bet.homeTeam, bet.awayTeam)} @{" "}
+                  {bet.oddsSnapshot.toFixed(2)}
                 </p>
                 <p className="text-sm text-zinc-600">
                   Einsatz: {bet.stake} Punkte | Anstoß: {new Date(bet.startsAt).toLocaleString("de-DE")}

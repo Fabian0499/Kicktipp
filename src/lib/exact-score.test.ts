@@ -6,18 +6,19 @@ import {
 } from "./exact-score";
 
 describe("winningExactScoreOutcomes", () => {
-  it("liefert konkrete Zeile im 0–3-Raster außer 3:3", () => {
+  it("liefert konkrete Zeile im 0–4-Raster", () => {
     expect(winningExactScoreOutcomes(2, 1)).toEqual(["2:1"]);
+    expect(winningExactScoreOutcomes(4, 4)).toEqual(["4:4"]);
   });
 
-  it("3:3 und alle höheren Ergebnisse → X:X", () => {
-    expect(winningExactScoreOutcomes(3, 3)).toEqual([EXACT_SCORE_CATCH_ALL_LABEL]);
-    expect(winningExactScoreOutcomes(4, 1)).toEqual([EXACT_SCORE_CATCH_ALL_LABEL]);
+  it("Ergebnisse außerhalb der Matrix → X:X", () => {
+    expect(winningExactScoreOutcomes(5, 0)).toEqual([EXACT_SCORE_CATCH_ALL_LABEL]);
+    expect(winningExactScoreOutcomes(3, 5)).toEqual([EXACT_SCORE_CATCH_ALL_LABEL]);
   });
 });
 
 describe("exactScoreOutcomeForPrediction", () => {
-  it("3:3 Vorhersage mappt auf X:X-Option", () => {
-    expect(exactScoreOutcomeForPrediction(3, 3)).toBe(EXACT_SCORE_CATCH_ALL_LABEL);
+  it("4:4 Vorhersage mappt auf exakte Zeile", () => {
+    expect(exactScoreOutcomeForPrediction(4, 4)).toBe("4:4");
   });
 });

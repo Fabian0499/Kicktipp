@@ -76,7 +76,7 @@ export default async function WmSieger2026Page() {
       <div className="relative mx-auto w-full max-w-4xl px-6 py-10">
         <h1 className="text-3xl font-bold text-white">WM Sieger 2026</h1>
         <p className="mt-2 max-w-2xl text-zinc-100">
-          Wer wird Weltmeister? Wähle eine Mannschaft – inklusive „Alle anderen“ für Außenseiter-Siege.
+          Wer wird Weltmeister? Wähle eine Mannschaft – inklusive „Piraten“ für Außenseiter-Siege (Restfeld).
         </p>
         <div className="mt-8">
           <WmWinnerBoard

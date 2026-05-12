@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { usePersistedDetailsOpen } from "@/hooks/use-persisted-details-open";
+import { WORLD_CUP_GROUP_CODES, inferWorldCupGroupCode } from "@/lib/world-cup-groups";
 
 const NEW_MATCH_DETAILS_STORAGE_KEY = "kicktipp-admin-new-match-details-open";
 
@@ -18,6 +19,12 @@ export function AdminMatchForm() {
   const [cardsRowCount, setCardsRowCount] = useState(9);
   const [cornersRowStart, setCornersRowStart] = useState(0);
   const [cornersRowCount, setCornersRowCount] = useState(9);
+  const [handicapRowCount, setHandicapRowCount] = useState(5);
+  const [homeTeam, setHomeTeam] = useState("Deutschland");
+  const [awayTeam, setAwayTeam] = useState("Ukraine");
+  const inferredGroupCode = inferWorldCupGroupCode(homeTeam, awayTeam);
+  const [manualGroupCode, setManualGroupCode] = useState<string>("");
+  const selectedGroupCode = manualGroupCode || inferredGroupCode || "";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -31,6 +38,7 @@ export function AdminMatchForm() {
     const payload = {
       homeTeam: String(formData.get("homeTeam") ?? ""),
       awayTeam: String(formData.get("awayTeam") ?? ""),
+      groupCode: selectedGroupCode || null,
       startsAt: new Date(String(formData.get("startsAt") ?? "")).toISOString(),
       isKnockout: String(formData.get("isKnockout") ?? "no") === "yes",
       odds: {
@@ -38,11 +46,6 @@ export function AdminMatchForm() {
           home: Number(formData.get("odd1")),
           draw: Number(formData.get("oddX")),
           away: Number(formData.get("odd2")),
-        },
-        halfTimeOneXTwo: {
-          home: Number(formData.get("oddHt1")),
-          draw: Number(formData.get("oddHtX")),
-          away: Number(formData.get("oddHt2")),
         },
         halfTimeFullTime: {
           oneOne: Number(formData.get("oddHtFt11")),
@@ -55,24 +58,17 @@ export function AdminMatchForm() {
           twoX: Number(formData.get("oddHtFt2X")),
           twoTwo: Number(formData.get("oddHtFt22")),
         },
-        exactScore: {
-          s00: Number(formData.get("oddCs00")),
-          s10: Number(formData.get("oddCs10")),
-          s01: Number(formData.get("oddCs01")),
-          s11: Number(formData.get("oddCs11")),
-          s20: Number(formData.get("oddCs20")),
-          s02: Number(formData.get("oddCs02")),
-          s21: Number(formData.get("oddCs21")),
-          s12: Number(formData.get("oddCs12")),
-          s22: Number(formData.get("oddCs22")),
-          s30: Number(formData.get("oddCs30")),
-          s03: Number(formData.get("oddCs03")),
-          s31: Number(formData.get("oddCs31")),
-          s13: Number(formData.get("oddCs13")),
-          s32: Number(formData.get("oddCs32")),
-          s23: Number(formData.get("oddCs23")),
-          s33: Number(formData.get("oddCs33")),
-        },
+        exactScore: (() => {
+          const row: Record<string, number> = {
+            catchAll: Number(formData.get("oddCsCatchAll")),
+          };
+          for (let h = 0; h <= 4; h += 1) {
+            for (let a = 0; a <= 4; a += 1) {
+              row[`s${h}${a}`] = Number(formData.get(`oddCs${h}${a}`));
+            }
+          }
+          return row;
+        })(),
         overUnder15: {
           over: Number(formData.get("oddOver15")),
           under: Number(formData.get("oddUnder15")),
@@ -97,11 +93,26 @@ export function AdminMatchForm() {
           yes: Number(formData.get("oddBttsYes")),
           no: Number(formData.get("oddBttsNo")),
         },
-        doubleChance: {
-          oneX: Number(formData.get("odd1X")),
-          twelve: Number(formData.get("odd12")),
-          xTwo: Number(formData.get("oddX2")),
-        },
+        handicapMatrixRowCount: Number(formData.get("handicapMatrixRowCount")),
+        handicapMatrix: (() => {
+          const hCount = Number(formData.get("handicapMatrixRowCount"));
+          return [
+            ...Array.from({ length: hCount }, (_, i) => ({
+              homeHandicap: i + 1,
+              awayHandicap: 0,
+              home: Number(formData.get(`oddHandicapHomeH${i}`)),
+              draw: Number(formData.get(`oddHandicapHomeX${i}`)),
+              away: Number(formData.get(`oddHandicapHomeA${i}`)),
+            })),
+            ...Array.from({ length: hCount }, (_, i) => ({
+              homeHandicap: 0,
+              awayHandicap: i + 1,
+              home: Number(formData.get(`oddHandicapAwayH${i}`)),
+              draw: Number(formData.get(`oddHandicapAwayX${i}`)),
+              away: Number(formData.get(`oddHandicapAwayA${i}`)),
+            })),
+          ];
+        })(),
         cardsMatrixStart: Number(formData.get("cardsMatrixStart")),
         cardsMatrixRowCount: Number(formData.get("cardsMatrixRowCount")),
         cardsMatrix: (() => {
@@ -165,10 +176,14 @@ export function AdminMatchForm() {
     }
 
     form.reset();
+    setHomeTeam("Deutschland");
+    setAwayTeam("Ukraine");
+    setManualGroupCode("");
     setCardsRowStart(0);
     setCardsRowCount(9);
     setCornersRowStart(0);
     setCornersRowCount(9);
+    setHandicapRowCount(5);
     setMessage("Spiel und Märkte wurden veröffentlicht und sind jetzt im Reiter Tipps sichtbar.");
     setLoading(false);
   }
@@ -188,7 +203,8 @@ export function AdminMatchForm() {
           <label className="block text-sm font-medium">Heimteam</label>
           <input
             name="homeTeam"
-            defaultValue="Deutschland"
+            value={homeTeam}
+            onChange={(event) => setHomeTeam(event.target.value)}
             required
             className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-900"
           />
@@ -197,10 +213,37 @@ export function AdminMatchForm() {
           <label className="block text-sm font-medium">Auswärtsteam</label>
           <input
             name="awayTeam"
-            defaultValue="Ukraine"
+            value={awayTeam}
+            onChange={(event) => setAwayTeam(event.target.value)}
             required
             className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-900"
           />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label className="block text-sm font-medium">Gruppe (automatisch erkannt)</label>
+          <input
+            value={inferredGroupCode ? `Gruppe ${inferredGroupCode}` : "Keine eindeutige Gruppe erkannt"}
+            readOnly
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-zinc-50 px-3 py-2 text-zinc-900"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Gruppe manuell überschreiben (optional)</label>
+          <select
+            value={manualGroupCode}
+            onChange={(event) => setManualGroupCode(event.target.value)}
+            className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-900"
+          >
+            <option value="">Automatisch ({inferredGroupCode ? `Gruppe ${inferredGroupCode}` : "keine"})</option>
+            {WORLD_CUP_GROUP_CODES.map((groupCode) => (
+              <option key={groupCode} value={groupCode}>
+                Gruppe {groupCode}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -288,15 +331,6 @@ export function AdminMatchForm() {
         </fieldset>
 
         <fieldset className="rounded-md border p-3">
-          <legend className="px-2 text-sm font-semibold">Halbzeit 1X2</legend>
-          <div className="mt-2 grid gap-2">
-            <input name="oddHt1" type="number" step="0.01" min="1.01" placeholder="Quote HZ 1" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddHtX" type="number" step="0.01" min="1.01" placeholder="Quote HZ X" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddHt2" type="number" step="0.01" min="1.01" placeholder="Quote HZ 2" required className="rounded-md border border-zinc-300 px-3 py-2" />
-          </div>
-        </fieldset>
-
-        <fieldset className="rounded-md border p-3">
           <legend className="px-2 text-sm font-semibold">Halbzeit / Endstand</legend>
           <div className="mt-2 grid gap-2 md:grid-cols-3">
             <input name="oddHtFt11" type="number" step="0.01" min="1.01" placeholder="1/1" required className="rounded-md border border-zinc-300 px-3 py-2" />
@@ -311,31 +345,41 @@ export function AdminMatchForm() {
           </div>
         </fieldset>
 
-        <fieldset className="rounded-md border p-3">
-          <legend className="px-2 text-sm font-semibold">Exact Score (0:0 bis 3:3)</legend>
+        <fieldset className="rounded-md border p-3 md:col-span-2">
+          <legend className="px-2 text-sm font-semibold">Exact Score (0:0 bis 4:4)</legend>
           <p className="mb-3 text-xs text-zinc-600">
-            Die <strong>ersten 15 Felder</strong> (von <strong>0:0</strong> bis <strong>2:3</strong>) gelten jeweils nur
-            für genau dieses Ergebnis. Das letzte Feld (<strong>X:X</strong>) ist die Quote für{" "}
-            <strong>exakt 3:3</strong> und zugleich die <strong>Sammelquote für jedes andere</strong> Ergebnis
-            außerhalb der Matrix (z. B. <strong>4:2</strong>, <strong>3:4</strong>).
+            Die <strong>25 Felder</strong> im Raster sind jeweils nur für das genaue Ergebnis (
+            <strong>Heim: Gast</strong>, jeweils 0–4). Das Feld <strong>X:X</strong> ist die Sammelquote für jedes
+            Ergebnis, bei dem eine Mannschaft <strong>mehr als 4 Tore</strong> erzielt (z. B.{" "}
+            <strong>5:2</strong>, <strong>3:5</strong>).
           </p>
-          <div className="mt-2 grid gap-2 md:grid-cols-4">
-            <input name="oddCs00" type="number" step="0.01" min="1.01" placeholder="0:0" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs10" type="number" step="0.01" min="1.01" placeholder="1:0" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs01" type="number" step="0.01" min="1.01" placeholder="0:1" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs11" type="number" step="0.01" min="1.01" placeholder="1:1" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs20" type="number" step="0.01" min="1.01" placeholder="2:0" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs02" type="number" step="0.01" min="1.01" placeholder="0:2" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs21" type="number" step="0.01" min="1.01" placeholder="2:1" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs12" type="number" step="0.01" min="1.01" placeholder="1:2" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs22" type="number" step="0.01" min="1.01" placeholder="2:2" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs30" type="number" step="0.01" min="1.01" placeholder="3:0" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs03" type="number" step="0.01" min="1.01" placeholder="0:3" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs31" type="number" step="0.01" min="1.01" placeholder="3:1" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs13" type="number" step="0.01" min="1.01" placeholder="1:3" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs32" type="number" step="0.01" min="1.01" placeholder="3:2" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs23" type="number" step="0.01" min="1.01" placeholder="2:3" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddCs33" type="number" step="0.01" min="1.01" placeholder="X:X" required className="rounded-md border border-zinc-300 px-3 py-2" />
+          <div className="mt-2 grid gap-2 sm:grid-cols-5">
+            {Array.from({ length: 5 }, (_, h) =>
+              Array.from({ length: 5 }, (_, a) => (
+                <input
+                  key={`oddCs-${h}-${a}`}
+                  name={`oddCs${h}${a}`}
+                  type="number"
+                  step="0.01"
+                  min="1.01"
+                  placeholder={`${h}:${a}`}
+                  required
+                  className="rounded-md border border-zinc-300 px-2 py-2 text-sm"
+                />
+              )),
+            ).flat()}
+          </div>
+          <div className="mt-4">
+            <label className="block text-xs font-semibold text-zinc-800">Sammelquote X:X (Außerhalb 0:0–4:4)</label>
+            <input
+              name="oddCsCatchAll"
+              type="number"
+              step="0.01"
+              min="1.01"
+              placeholder="X:X"
+              required
+              className="mt-1 w-full max-w-xs rounded-md border border-zinc-300 px-3 py-2"
+            />
           </div>
         </fieldset>
 
@@ -395,12 +439,103 @@ export function AdminMatchForm() {
           </div>
         </fieldset>
 
-        <fieldset className="rounded-md border p-3">
-          <legend className="px-2 text-sm font-semibold">Doppelte Chance</legend>
-          <div className="mt-2 grid gap-2">
-            <input name="odd1X" type="number" step="0.01" min="1.01" placeholder="Quote 1X" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="odd12" type="number" step="0.01" min="1.01" placeholder="Quote 12" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddX2" type="number" step="0.01" min="1.01" placeholder="Quote X2" required className="rounded-md border border-zinc-300 px-3 py-2" />
+        <fieldset className="rounded-md border p-4 md:col-span-2">
+          <legend className="px-2 text-base font-semibold text-zinc-900">Handicap</legend>
+          <p className="mb-3 text-xs text-zinc-600">
+            Handicap in beide Richtungen: <strong>1:0</strong>, <strong>2:0</strong> usw. und <strong>0:1</strong>,{" "}
+            <strong>0:2</strong> usw. Pro Zeile je eine Quote für Heim, Unentschieden und Auswärts nach angewendetem
+            Handicap.
+          </p>
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-zinc-800">Anzahl Zeilen</label>
+            <input
+              name="handicapMatrixRowCount"
+              type="number"
+              min={1}
+              max={15}
+              required
+              value={handicapRowCount}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (Number.isFinite(v)) {
+                  setHandicapRowCount(Math.min(15, Math.max(1, Math.round(v))));
+                }
+              }}
+              className="mt-1 w-24 rounded-md border border-zinc-300 px-2 py-1.5 tabular-nums"
+            />
+            <p className="mt-1 text-[11px] text-zinc-500">1–15 pro Richtung</p>
+          </div>
+          <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
+            <table className="w-full min-w-[32rem] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
+                  <th className="px-3 py-2 font-semibold text-black">Handicap</th>
+                  <th className="px-3 py-2 font-semibold text-black">Heim ({homeTeam || "Heimteam"})</th>
+                  <th className="px-3 py-2 font-semibold text-black">Unentschieden</th>
+                  <th className="px-3 py-2 font-semibold text-black">Auswärts ({awayTeam || "Auswärtsteam"})</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ...Array.from({ length: handicapRowCount }, (_, i) => ({
+                    key: `home-${i}`,
+                    label: `${i + 1}:0`,
+                    fieldPrefix: "Home",
+                    index: i,
+                  })),
+                  ...Array.from({ length: handicapRowCount }, (_, i) => ({
+                    key: `away-${i}`,
+                    label: `0:${i + 1}`,
+                    fieldPrefix: "Away",
+                    index: i,
+                  })),
+                ].map((row) => {
+                  return (
+                    <tr key={row.key} className="border-b border-zinc-100">
+                      <td className="whitespace-nowrap px-3 py-2 font-medium tabular-nums text-black">
+                        {row.label}
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          name={`oddHandicap${row.fieldPrefix}H${row.index}`}
+                          type="number"
+                          step="0.01"
+                          min="1.01"
+                          max={1000}
+                          required
+                          placeholder="Quote"
+                          className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          name={`oddHandicap${row.fieldPrefix}X${row.index}`}
+                          type="number"
+                          step="0.01"
+                          min="1.01"
+                          max={1000}
+                          required
+                          placeholder="Quote"
+                          className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5"
+                        />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <input
+                          name={`oddHandicap${row.fieldPrefix}A${row.index}`}
+                          type="number"
+                          step="0.01"
+                          min="1.01"
+                          max={1000}
+                          required
+                          placeholder="Quote"
+                          className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </fieldset>
 

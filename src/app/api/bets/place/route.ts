@@ -3,6 +3,7 @@ import { PointTransactionType } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { profiBetConflictsOpenSet } from "@/lib/betting-conflicts";
+import { profiMarketCategoryKey } from "@/lib/profi-market-category";
 import { MIN_BETTABLE_ODDS, oddsViolateMinimumForMarket } from "@/lib/min-bettable-odds";
 import { placeBetSchema } from "@/lib/validation";
 
@@ -105,6 +106,16 @@ export async function POST(request: Request) {
       continue;
     }
     const openForMatch = openByMatch.get(selection.matchId) ?? [];
+    const newCategory = profiMarketCategoryKey(option.market.type);
+    if (openForMatch.some((entry) => profiMarketCategoryKey(entry.marketType) === newCategory)) {
+      return NextResponse.json(
+        {
+          error:
+            "Für dieses Spiel hast du bereits einen offenen Tipp in dieser Wett-Kategorie (z. B. zählen alle Über-/Unter-Tore als eine Kategorie). Pro Spiel ist nur ein offener Tipp pro Kategorie erlaubt.",
+        },
+        { status: 400 },
+      );
+    }
     if (
       profiBetConflictsOpenSet(
         { marketType: option.market.type, outcomeLabel: option.outcome },

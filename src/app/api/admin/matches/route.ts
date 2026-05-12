@@ -1,8 +1,9 @@
-import { MarketType, PointTransactionType, UserRole } from "@prisma/client";
+import { MarketType, PointTransactionType, Prisma, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { adminCreateMatchSchema } from "@/lib/validation";
+import { inferWorldCupGroupCode } from "@/lib/world-cup-groups";
 
 export async function POST(request: Request) {
   const currentUser = await getCurrentUser();
@@ -21,24 +22,45 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ungültige Eingaben." }, { status: 400 });
   }
 
-  const { homeTeam, awayTeam, startsAt, isKnockout, odds } = parsed.data;
+  const { homeTeam, awayTeam, groupCode, startsAt, isKnockout, odds } = parsed.data;
   const allocatedBudget = isKnockout ? 200 : 100;
+  const resolvedGroupCode = groupCode ?? inferWorldCupGroupCode(homeTeam, awayTeam);
 
   const createdMatch = await db.$transaction(async (tx) => {
-    const match = await tx.match.create({
-      data: {
-        homeTeam,
-        awayTeam,
-        startsAt: new Date(startsAt),
-        isKnockout,
-        isPublished: true,
-        createdById: currentUser.id,
-        cardsMatrixStart: odds.cardsMatrixStart,
-        cardsMatrixRowCount: odds.cardsMatrixRowCount,
-        cornersMatrixStart: odds.cornersMatrixStart,
-        cornersMatrixRowCount: odds.cornersMatrixRowCount,
-      } as Parameters<(typeof tx.match)["create"]>[0]["data"],
-    });
+    const baseMatchData = {
+      homeTeam,
+      awayTeam,
+      startsAt: new Date(startsAt),
+      isKnockout,
+      isPublished: true,
+      createdById: currentUser.id,
+      cardsMatrixStart: odds.cardsMatrixStart,
+      cardsMatrixRowCount: odds.cardsMatrixRowCount,
+      cornersMatrixStart: odds.cornersMatrixStart,
+      cornersMatrixRowCount: odds.cornersMatrixRowCount,
+    };
+    let match: { id: string; homeTeam: string; awayTeam: string; isKnockout: boolean };
+    try {
+      match = await tx.match.create({
+        data: {
+          ...baseMatchData,
+          ...(resolvedGroupCode ? { groupCode: resolvedGroupCode } : {}),
+        } as Parameters<(typeof tx.match)["create"]>[0]["data"],
+      });
+    } catch (error) {
+      const isUnknownGroupCodeArgument =
+        error instanceof Prisma.PrismaClientValidationError &&
+        error.message.includes("Unknown argument `groupCode`");
+
+      if (!isUnknownGroupCodeArgument) {
+        throw error;
+      }
+
+      // Fallback for environments where Prisma Client/DB migration lag behind.
+      match = await tx.match.create({
+        data: baseMatchData as Parameters<(typeof tx.match)["create"]>[0]["data"],
+      });
+    }
 
     async function createMarket(type: MarketType, title: string, options: Array<{ outcome: string; odds: number }>) {
       const market = await tx.matchMarket.create({
@@ -64,12 +86,6 @@ export async function POST(request: Request) {
       { outcome: "2", odds: odds.oneXTwo.away },
     ]);
 
-    await createMarket("HALF_TIME_ONE_X_TWO" as MarketType, "Halbzeit 1X2", [
-      { outcome: "1", odds: odds.halfTimeOneXTwo.home },
-      { outcome: "X", odds: odds.halfTimeOneXTwo.draw },
-      { outcome: "2", odds: odds.halfTimeOneXTwo.away },
-    ]);
-
     await createMarket("HALF_TIME_FULL_TIME" as MarketType, "Halbzeit / Endstand", [
       { outcome: "1/1", odds: odds.halfTimeFullTime.oneOne },
       { outcome: "1/X", odds: odds.halfTimeFullTime.oneX },
@@ -82,24 +98,22 @@ export async function POST(request: Request) {
       { outcome: "2/2", odds: odds.halfTimeFullTime.twoTwo },
     ]);
 
-    await createMarket("EXACT_SCORE" as MarketType, "Exact Score", [
-      { outcome: "0:0", odds: odds.exactScore.s00 },
-      { outcome: "1:0", odds: odds.exactScore.s10 },
-      { outcome: "0:1", odds: odds.exactScore.s01 },
-      { outcome: "1:1", odds: odds.exactScore.s11 },
-      { outcome: "2:0", odds: odds.exactScore.s20 },
-      { outcome: "0:2", odds: odds.exactScore.s02 },
-      { outcome: "2:1", odds: odds.exactScore.s21 },
-      { outcome: "1:2", odds: odds.exactScore.s12 },
-      { outcome: "2:2", odds: odds.exactScore.s22 },
-      { outcome: "3:0", odds: odds.exactScore.s30 },
-      { outcome: "0:3", odds: odds.exactScore.s03 },
-      { outcome: "3:1", odds: odds.exactScore.s31 },
-      { outcome: "1:3", odds: odds.exactScore.s13 },
-      { outcome: "3:2", odds: odds.exactScore.s32 },
-      { outcome: "2:3", odds: odds.exactScore.s23 },
-      { outcome: "X:X", odds: odds.exactScore.s33 },
-    ]);
+    await createMarket(
+      "EXACT_SCORE" as MarketType,
+      "Exact Score",
+      (() => {
+        const rows: Array<{ outcome: string; odds: number }> = [];
+        const es = odds.exactScore as Record<string, number>;
+        for (let h = 0; h <= 4; h += 1) {
+          for (let a = 0; a <= 4; a += 1) {
+            const key = `s${h}${a}`;
+            rows.push({ outcome: `${h}:${a}`, odds: es[key] });
+          }
+        }
+        rows.push({ outcome: "X:X", odds: es.catchAll });
+        return rows;
+      })(),
+    );
 
     await createMarket("OVER_UNDER_1_5" as MarketType, "Über/Unter 1.5", [
       { outcome: "Über 1.5", odds: odds.overUnder15.over },
@@ -131,11 +145,15 @@ export async function POST(request: Request) {
       { outcome: "Nein", odds: odds.bothTeamsToScore.no },
     ]);
 
-    await createMarket(MarketType.DOUBLE_CHANCE, "Doppelte Chance", [
-      { outcome: "1X", odds: odds.doubleChance.oneX },
-      { outcome: "12", odds: odds.doubleChance.twelve },
-      { outcome: "X2", odds: odds.doubleChance.xTwo },
-    ]);
+    const handicapOptions: Array<{ outcome: string; odds: number }> = [];
+    for (const row of odds.handicapMatrix) {
+      handicapOptions.push(
+        { outcome: `HANDICAP:${row.homeHandicap}:${row.awayHandicap}:1`, odds: row.home },
+        { outcome: `HANDICAP:${row.homeHandicap}:${row.awayHandicap}:X`, odds: row.draw },
+        { outcome: `HANDICAP:${row.homeHandicap}:${row.awayHandicap}:2`, odds: row.away },
+      );
+    }
+    await createMarket("HANDICAP_MATRIX" as MarketType, "Handicap", handicapOptions);
 
     const cardOptions: Array<{ outcome: string; odds: number }> = [];
     const kStart = odds.cardsMatrixStart;

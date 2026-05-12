@@ -4,16 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-function leaderboardDisplayLabel(username: string | null, name: string): string {
-  const u = username?.trim() ?? "";
-  const n = name.trim();
-  if (u && n && u.toLowerCase() !== n.toLowerCase()) {
-    return `${u} | ${n}`;
-  }
-  if (u) {
-    return u;
-  }
-  return n || "–";
+function leaderboardDisplayLabel(username: string | null, email: string): string {
+  return username?.trim() || email;
 }
 
 export default async function LeaderboardPage() {
@@ -30,7 +22,7 @@ export default async function LeaderboardPage() {
   const ranking = users
     .map((user) => ({
       id: user.id,
-      displayName: leaderboardDisplayLabel(user.username, user.name),
+      displayName: leaderboardDisplayLabel(user.username, user.email),
       points: user.wallet?.balance ?? 0,
       avatarUrl: user.avatarUrl,
     }))

@@ -11,11 +11,8 @@ export default async function Home() {
     >
       <div className="absolute inset-0 bg-black/45" />
       <div className="relative mx-auto flex w-full max-w-6xl flex-col justify-center gap-8 px-6 py-16 text-white">
-        <span className="inline-block w-fit rounded-full bg-white/90 px-3 py-1 text-sm font-medium text-zinc-900">
-          Phase 1 aktiv
-        </span>
         <h1 className="max-w-3xl text-4xl font-bold leading-tight">
-          Moderne Kicktipp-Plattform mit einfachem Einstieg und professioneller Erweiterung
+          Willkommen bei dibiti
         </h1>
         <p className="max-w-3xl text-lg text-zinc-100">
           Erstelle Tipps, verwalte dein Punktekonto und verfolge später deine Position in der gemeinsamen Rangliste.

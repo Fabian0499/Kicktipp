@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { WORLD_CUP_GROUP_CODES } from "@/lib/world-cup-groups";
 
 export const registerSchema = z.object({
   email: z.email().toLowerCase(),
@@ -8,7 +9,6 @@ export const registerSchema = z.object({
     .min(3)
     .max(24)
     .regex(/^[a-zA-Z0-9_]+$/, "Nur Buchstaben, Zahlen und Unterstrich erlaubt."),
-  name: z.string().min(2).max(80),
   password: z
     .string()
     .min(8)
@@ -40,18 +40,23 @@ export const resetPasswordSchema = z.object({
 
 const oddValue = z.coerce.number().positive().max(1000);
 
+/** Keys s00…s44 (Matrix 0:0–4:4) + catchAll für Sammelquote „X:X“. */
+const exactScoreOddsShapeEntries = Array.from({ length: 5 }, (_, h) =>
+  Array.from({ length: 5 }, (_, a) => [`s${h}${a}`, oddValue] as const),
+).flat();
+
+export const exactScoreOddsSchema = z.object(
+  Object.fromEntries([...exactScoreOddsShapeEntries, ["catchAll", oddValue] as const]) as z.ZodRawShape,
+);
+
 export const adminCreateMatchSchema = z.object({
   homeTeam: z.string().trim().min(2).max(60),
   awayTeam: z.string().trim().min(2).max(60),
+  groupCode: z.enum(WORLD_CUP_GROUP_CODES).nullable().optional(),
   startsAt: z.iso.datetime(),
   isKnockout: z.boolean().default(false),
   odds: z.object({
     oneXTwo: z.object({
-      home: oddValue,
-      draw: oddValue,
-      away: oddValue,
-    }),
-    halfTimeOneXTwo: z.object({
       home: oddValue,
       draw: oddValue,
       away: oddValue,
@@ -67,24 +72,7 @@ export const adminCreateMatchSchema = z.object({
       twoX: oddValue,
       twoTwo: oddValue,
     }),
-    exactScore: z.object({
-      s00: oddValue,
-      s10: oddValue,
-      s01: oddValue,
-      s11: oddValue,
-      s20: oddValue,
-      s02: oddValue,
-      s21: oddValue,
-      s12: oddValue,
-      s22: oddValue,
-      s30: oddValue,
-      s03: oddValue,
-      s31: oddValue,
-      s13: oddValue,
-      s32: oddValue,
-      s23: oddValue,
-      s33: oddValue,
-    }),
+    exactScore: exactScoreOddsSchema,
     overUnder15: z.object({
       over: oddValue,
       under: oddValue,
@@ -109,11 +97,19 @@ export const adminCreateMatchSchema = z.object({
       yes: oddValue,
       no: oddValue,
     }),
-    doubleChance: z.object({
-      oneX: oddValue,
-      twelve: oddValue,
-      xTwo: oddValue,
-    }),
+    handicapMatrixRowCount: z.coerce.number().int().min(1).max(15),
+    handicapMatrix: z
+      .array(
+        z.object({
+          homeHandicap: z.coerce.number().int().min(0).max(30),
+          awayHandicap: z.coerce.number().int().min(0).max(30),
+          home: oddValue,
+          draw: oddValue,
+          away: oddValue,
+        }),
+      )
+      .min(1)
+      .max(30),
     cardsMatrixStart: z.coerce.number().int().min(0).max(30),
     cardsMatrixRowCount: z.coerce.number().int().min(1).max(15),
     cardsMatrix: z
@@ -155,6 +151,25 @@ export const adminCreateMatchSchema = z.object({
     {
       message: "Bei KO-Spielen sind Quoten für „Qualifiziert sich“ (Heim/Gast) erforderlich.",
       path: ["odds", "toQualify"],
+    },
+  )
+  .refine(
+    (data) => data.odds.handicapMatrix.length === data.odds.handicapMatrixRowCount * 2,
+    {
+      message: "Handicap: Anzahl der Quotenzeilen muss zur eingetragenen Zeilenanzahl passen.",
+      path: ["odds", "handicapMatrix"],
+    },
+  )
+  .refine(
+    (data) =>
+      data.odds.handicapMatrix.every(
+        (row) =>
+          (row.homeHandicap > 0 && row.awayHandicap === 0) ||
+          (row.homeHandicap === 0 && row.awayHandicap > 0),
+      ),
+    {
+      message: "Handicap: Pro Zeile darf nur eine Seite einen Vorsprung haben.",
+      path: ["odds", "handicapMatrix"],
     },
   )
   .refine(
@@ -263,6 +278,17 @@ export const placeWmWinnerSchema = z.object({
 
 export const adminWmWinnerUpdateSchema = z.object({
   closesAt: z.iso.datetime().optional(),
+  options: z
+    .array(
+      z.object({
+        id: z.string().min(4),
+        odds: z.coerce.number().min(1.01).max(1000),
+      }),
+    )
+    .min(1),
+});
+
+export const adminUpdateMatchOddsSchema = z.object({
   options: z
     .array(
       z.object({

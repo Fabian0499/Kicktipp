@@ -2,7 +2,7 @@ import { BetStatus, PointTransactionType, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { netBetProfitFromOdds } from "@/lib/bet-payout";
+import { payoutFromOdds } from "@/lib/bet-payout";
 import { adminWmWinnerSettleSchema } from "@/lib/validation";
 import { WM_WINNER_EVENT_KEY, WM_WINNER_MAX_PAYOUT } from "@/lib/wm-winner";
 
@@ -59,8 +59,8 @@ export async function POST(request: Request) {
 
     for (const pick of openPicks) {
       const won = pick.optionId === winningOptionId;
-      const rawProfit = netBetProfitFromOdds(pick.stake, pick.oddsSnapshot);
-      const payout = won ? Math.min(rawProfit, WM_WINNER_MAX_PAYOUT) : 0;
+      const rawPayout = payoutFromOdds(pick.stake, pick.oddsSnapshot);
+      const payout = won ? Math.min(rawPayout, WM_WINNER_MAX_PAYOUT) : 0;
 
       await tx.wmWinnerPick.update({
         where: { id: pick.id },

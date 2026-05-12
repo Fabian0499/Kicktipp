@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ungültige Eingaben." }, { status: 400 });
   }
 
-  const { email, username, name, password } = parsed.data;
+  const { email, username, password } = parsed.data;
   const existingUser = await db.user.findUnique({ where: { email } });
   if (existingUser) {
     return NextResponse.json({ error: "E-Mail bereits registriert." }, { status: 409 });
@@ -35,7 +35,6 @@ export async function POST(request: Request) {
       data: {
         email,
         username,
-        name,
         passwordHash,
         status: UserStatus.PENDING,
       },
@@ -78,7 +77,6 @@ export async function POST(request: Request) {
     id: user.id,
     email: user.email,
     username: user.username,
-    name: user.name,
     message: "Registrierung erfolgreich. Dein Konto wird nach Admin-Freigabe aktiviert.",
   });
 }

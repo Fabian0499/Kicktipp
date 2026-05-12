@@ -1,14 +1,14 @@
+/** Maximales Tor-Raster für Einzelquoten (0:0 … 4:4). */
+export const EXACT_SCORE_MATRIX_MAX = 4;
+
 /**
- * Letzte Exact-Score-Option: Label „X:X“ = exakt 3:3 sowie jedes Ergebnis außerhalb der 0:0–3:3-Matrix
- * (nicht die 15 übrigen Einzelergebnisse).
+ * Option „X:X“ = Sammelquote für jedes Ergebnis, bei dem mindestens eine Mannschaft mehr als
+ * {@link EXACT_SCORE_MATRIX_MAX} Tore erzielt hat (also außerhalb der 5×5-Matrix).
  */
 export const EXACT_SCORE_CATCH_ALL_LABEL = "X:X";
 
 export function winningExactScoreOutcomes(homeScore: number, awayScore: number): string[] {
-  if (homeScore <= 3 && awayScore <= 3) {
-    if (homeScore === 3 && awayScore === 3) {
-      return [EXACT_SCORE_CATCH_ALL_LABEL];
-    }
+  if (homeScore <= EXACT_SCORE_MATRIX_MAX && awayScore <= EXACT_SCORE_MATRIX_MAX) {
     return [`${homeScore}:${awayScore}`];
   }
   return [EXACT_SCORE_CATCH_ALL_LABEL];
