@@ -9,12 +9,12 @@ const sections = [
   {
     title: "Tipps",
     href: "/bets",
-    text: "Hier siehst du die Spiele und gibst deine Tipps ab – entweder in der Billo-Variante (nur Endergebnis) oder in der Profi-Variante mit einzelnen Märkten und Einsätzen.",
+    text: "Hier siehst du die Spiele und gibst deine Tipps ab – entweder in der Billo-Variante (nur Endergebnis) oder in der Profi-Variante mit mehr Auswahl, Quoten und individuellem Punkteeinsatz.",
   },
   {
     title: "WM Sieger 2026",
     href: "/wm-sieger-2026",
-    text: "Eigene Sonderwette auf den Weltmeister.",
+    text: "Tippe darauf, welches Team die WM gewinnen wird.",
   },
   {
     title: "Rangliste",

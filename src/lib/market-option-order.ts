@@ -1,3 +1,5 @@
+import { exactScoreOutcomeSortIndex } from "@/lib/exact-score";
+
 type MarketOptionLike = {
   id: string;
   outcome: string;
@@ -10,15 +12,8 @@ const OUTCOME_ORDER: Record<string, string[]> = {
   HALF_TIME_FULL_TIME: ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"],
 };
 
-function exactScoreOrder(outcome: string): number | null {
-  if (outcome === "X:X") {
-    return 999;
-  }
-  const match = outcome.match(/^(\d+):(\d+)$/);
-  if (!match) {
-    return null;
-  }
-  return Number(match[1]) * 10 + Number(match[2]);
+function exactScoreOrder(outcome: string): number {
+  return exactScoreOutcomeSortIndex(outcome);
 }
 
 function matrixOrder(outcome: string, prefix: "GOALS" | "CARDS" | "CORNERS"): number | null {
@@ -53,7 +48,7 @@ function optionOrder(marketType: string, outcome: string): number {
   }
 
   if (marketType === "EXACT_SCORE") {
-    return exactScoreOrder(outcome) ?? 999;
+    return exactScoreOrder(outcome);
   }
   if (marketType === "GOALS_MATRIX") {
     return matrixOrder(outcome, "GOALS") ?? 999;

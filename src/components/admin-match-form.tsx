@@ -2,6 +2,12 @@
 
 import { FormEvent, useState } from "react";
 import { usePersistedDetailsOpen } from "@/hooks/use-persisted-details-open";
+import {
+  EXACT_SCORE_AWAY_WINS,
+  EXACT_SCORE_DRAWS,
+  EXACT_SCORE_HOME_WINS,
+  EXACT_SCORE_ORDERED_OUTCOMES,
+} from "@/lib/exact-score";
 import { WORLD_CUP_GROUP_CODES, inferWorldCupGroupCode } from "@/lib/world-cup-groups";
 
 const NEW_MATCH_DETAILS_STORAGE_KEY = "kicktipp-admin-new-match-details-open";
@@ -62,12 +68,11 @@ export function AdminMatchForm() {
         },
         exactScore: (() => {
           const row: Record<string, number> = {
-            catchAll: Number(formData.get("oddCsCatchAll")),
+            catchAll: Number(formData.get("esCatchAll")),
           };
-          for (let h = 0; h <= 4; h += 1) {
-            for (let a = 0; a <= 4; a += 1) {
-              row[`s${h}${a}`] = Number(formData.get(`oddCs${h}${a}`));
-            }
+          for (const outcome of EXACT_SCORE_ORDERED_OUTCOMES) {
+            const fieldKey = `es_${outcome.replace(":", "_")}`;
+            row[outcome] = Number(formData.get(fieldKey));
           }
           return row;
         })(),
@@ -345,33 +350,76 @@ export function AdminMatchForm() {
         </fieldset>
 
         <fieldset className="rounded-md border p-3 md:col-span-2">
-          <legend className="px-2 text-sm font-semibold">Exact Score (0:0 bis 4:4)</legend>
+          <legend className="px-2 text-sm font-semibold">Exact Score</legend>
           <p className="mb-3 text-xs text-zinc-600">
-            Die <strong>25 Felder</strong> im Raster sind jeweils nur für das genaue Ergebnis (
-            <strong>Heim: Gast</strong>, jeweils 0–4). Das Feld <strong>X:X</strong> ist die Sammelquote für jedes
-            Ergebnis, bei dem eine Mannschaft <strong>mehr als 4 Tore</strong> erzielt (z. B.{" "}
-            <strong>5:2</strong>, <strong>3:5</strong>).
+            Drei Spalten: Heimsiege, Unentschieden, Auswärtssiege (Format <strong>Heim : Gast</strong>).{" "}
+            <strong>X:X</strong> ist die Sammelquote für jedes Ergebnis, das nicht als eigene Zeile angeboten wird.
           </p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-5">
-            {Array.from({ length: 5 }, (_, h) =>
-              Array.from({ length: 5 }, (_, a) => (
-                <input
-                  key={`oddCs-${h}-${a}`}
-                  name={`oddCs${h}${a}`}
-                  type="number"
-                  step="0.01"
-                  min="1.01"
-                  placeholder={`${h}:${a}`}
-                  required
-                  className="rounded-md border border-zinc-300 px-2 py-2 text-sm"
-                />
-              )),
-            ).flat()}
+          <div className="mt-3 grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="border-b border-zinc-200 pb-2 text-center text-sm font-semibold text-black">{homeTeam}</p>
+              <div className="mt-2 space-y-2">
+                {EXACT_SCORE_HOME_WINS.map((outcome) => (
+                  <label key={outcome} className="flex items-center gap-2">
+                    <span className="w-10 shrink-0 tabular-nums text-xs font-medium text-zinc-800">{outcome}</span>
+                    <input
+                      name={`es_${outcome.replace(":", "_")}`}
+                      type="number"
+                      step="0.01"
+                      min="1.01"
+                      required
+                      placeholder="Quote"
+                      className="min-w-0 flex-1 rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="border-b border-zinc-200 pb-2 text-center text-sm font-semibold text-black">
+                Unentschieden
+              </p>
+              <div className="mt-2 space-y-2">
+                {EXACT_SCORE_DRAWS.map((outcome) => (
+                  <label key={outcome} className="flex items-center gap-2">
+                    <span className="w-10 shrink-0 tabular-nums text-xs font-medium text-zinc-800">{outcome}</span>
+                    <input
+                      name={`es_${outcome.replace(":", "_")}`}
+                      type="number"
+                      step="0.01"
+                      min="1.01"
+                      required
+                      placeholder="Quote"
+                      className="min-w-0 flex-1 rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="border-b border-zinc-200 pb-2 text-center text-sm font-semibold text-black">{awayTeam}</p>
+              <div className="mt-2 space-y-2">
+                {EXACT_SCORE_AWAY_WINS.map((outcome) => (
+                  <label key={outcome} className="flex items-center gap-2">
+                    <span className="w-10 shrink-0 tabular-nums text-xs font-medium text-zinc-800">{outcome}</span>
+                    <input
+                      name={`es_${outcome.replace(":", "_")}`}
+                      type="number"
+                      step="0.01"
+                      min="1.01"
+                      required
+                      placeholder="Quote"
+                      className="min-w-0 flex-1 rounded-md border border-zinc-300 px-2 py-1.5 text-sm"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="mt-4">
-            <label className="block text-xs font-semibold text-zinc-800">Sammelquote X:X (Außerhalb 0:0–4:4)</label>
+            <label className="block text-xs font-semibold text-zinc-800">Sammelquote X:X</label>
             <input
-              name="oddCsCatchAll"
+              name="esCatchAll"
               type="number"
               step="0.01"
               min="1.01"

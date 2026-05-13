@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatGoalsMatrixOutcomeLabel } from "@/lib/goals-market";
 import { formatHandicapMatrixOutcomeLabel } from "@/lib/handicap-market";
+import { formatOneXTwoDisplayLabel } from "@/lib/one-x-two-display";
 
 type BetRow = {
   id: string;
@@ -49,6 +50,9 @@ const DEFAULT_STATE: Record<SectionKey, boolean> = {
 };
 
 function displayOutcomeLabel(marketType: string, outcome: string, homeLabel?: string, awayLabel?: string): string {
+  if (marketType === "ONE_X_TWO") {
+    return formatOneXTwoDisplayLabel(outcome, homeLabel ?? "", awayLabel ?? "");
+  }
   if (marketType === "HANDICAP_MATRIX") {
     return formatHandicapMatrixOutcomeLabel(outcome, homeLabel, awayLabel);
   }

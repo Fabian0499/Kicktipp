@@ -21,6 +21,15 @@ import { FormEvent, Fragment, useEffect, useMemo, useState } from "react";
 import { payoutFromGrossReturn } from "@/lib/bet-payout";
 import { profiBetConflictsOpenSet } from "@/lib/betting-conflicts";
 import { MIN_BETTABLE_ODDS, oddsViolateMinimumForMarket } from "@/lib/min-bettable-odds";
+import {
+  EXACT_SCORE_AWAY_WINS,
+  EXACT_SCORE_CATCH_ALL_LABEL,
+  EXACT_SCORE_DRAWS,
+  EXACT_SCORE_HOME_WINS,
+  EXACT_SCORE_ORDERED_OUTCOMES,
+  sortExactScoreMarketOptions,
+} from "@/lib/exact-score";
+import { formatOneXTwoDisplayLabel } from "@/lib/one-x-two-display";
 import { profiMarketCategoryKey } from "@/lib/profi-market-category";
 
 const LEAGUE_MATCH_BET_BUDGET = 100;
@@ -129,24 +138,10 @@ function flagIsoForTeam(team: string): string | null {
   return COUNTRY_FLAG_ISO[normalized] ?? null;
 }
 
-function sortExactScoreOptions<T extends { outcome: string }>(options: T[]): T[] {
-  return [...options].sort((a, b) => {
-    if (a.outcome === "X:X") {
-      return 1;
-    }
-    if (b.outcome === "X:X") {
-      return -1;
-    }
-    const [ha, aa] = a.outcome.split(":").map(Number);
-    const [hb, ab] = b.outcome.split(":").map(Number);
-    if (ha !== hb) {
-      return ha - hb;
-    }
-    return aa - ab;
-  });
-}
-
 function displayOutcomeLabel(marketType: string, outcome: string, homeLabel?: string, awayLabel?: string): string {
+  if (marketType === "ONE_X_TWO") {
+    return formatOneXTwoDisplayLabel(outcome, homeLabel ?? "", awayLabel ?? "");
+  }
   if (marketType === "HANDICAP_MATRIX") {
     return formatHandicapMatrixOutcomeLabel(outcome, homeLabel, awayLabel);
   }
@@ -790,7 +785,11 @@ export function BetsBoard({
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
                         1X2
-                        <InfoTooltip text={"Wie wird der Ausgang des Spiels sein?\n1 = Heimteam gewinnt\nX = Unentschieden\n2 = Auswärtsteam gewinnt"} />
+                        <InfoTooltip
+                          text={
+                            "Wie wird der Ausgang des Spiels sein?\n\nSieg der Heimmannschaft, Unentschieden oder Sieg der Auswärtsmannschaft (Anzeige mit Teamnamen)."
+                          }
+                        />
                       </h3>
                       <div className="mt-3 space-y-3">
                         {combinedOutcomeMarkets.map((market) => (
@@ -833,7 +832,9 @@ export function BetsBoard({
                                         : "cursor-not-allowed opacity-70"
                                     }`}
                                   >
-                                    <p className="text-sm text-zinc-700">{option.outcome}</p>
+                                    <p className="text-sm text-zinc-700">
+                                      {formatOneXTwoDisplayLabel(option.outcome, match.homeTeam, match.awayTeam)}
+                                    </p>
                                     <p className="text-lg font-semibold text-blue-700">{option.odds.toFixed(2)}</p>
                                   </button>
                                 );
@@ -1119,7 +1120,11 @@ export function BetsBoard({
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
                         Handicap
-                        <InfoTooltip text={"Beim Handicap gibst du einer Mannschaft einen imaginären Vorsprung.\n\nBEISPIEL\nMarkt: Handicap (0:1)\nAuswahl: 1 (Heim)\n\nIn diesem Beispiel hat Team 2 einen 1-Tore-Vorsprung. Demzufolge muss Team 1 das Spiel mit mindestens 2 Toren Unterschied gewinnen, um auch die Handicapwette zu gewinnen."} />
+                        <InfoTooltip
+                          text={
+                            "Bei dieser Tippart bekommt ein Team einen fiktiven Vorsprung von einem oder mehreren Toren:\n\nHandicap (2:0) bedeutet, dass Team 1 einen Vorsprung von zwei Toren bekommt,\n\nHandicap (0:1) bedeutet, dass Team 2 einen Vorsprung von einem Tor bekommt\n\nund so weiter.\n\nGetippt wird dann, ob das tatsächliche Ergebnis nach Ende der regulären Spielzeit zusammen mit den fiktiven Toren aus dem Handicap zu einem Sieg von Team 1, zu einem Unentschieden oder zu einem Sieg von Team 2 führt.\n\nWer weiterhin Schwierigkeiten mit dieser Kategorie hat, kann sich gerne an die Admins wenden."
+                          }
+                        />
                       </h3>
                       <div className="mt-3 space-y-4">
                         {handicapMatrixMarkets.map((market) => {
@@ -1218,7 +1223,11 @@ export function BetsBoard({
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
                         Halbzeit / Endstand
-                        <InfoTooltip text={"Bei dieser Wette tippst du, wie die Halbzeit und das Spiel ausgehen. Beide Ergebnissse müssen korrekt sein, damit du gewinnst.\n\nBEISPIEL\nMarkt: Halbzeit/Endstand\nAuswahl: 1:1\n\nIn diesem Beispiel wettest du, dass das Heimteam die 1. Halbzeit gewinnt und das Heimteam das Spiel."} />
+                        <InfoTooltip
+                          text={
+                            "Dieser Tipp besteht aus zwei Teilen:\n\n1.\nWelches Team führt zur Halbzeit oder steht es zur Halbzeit unentschieden\n\n2.\nWelches Team hat das Match nach Ende der regulären Spielzeit gewonnen oder endet das Match nach Ende der regulären Spielzeit unentschieden\n\nBeide Teile müssen korrekt sein, damit es Punkte gibt."
+                          }
+                        />
                       </h3>
                       <div className="mt-3 space-y-3">
                         {halfTimeFullTimeMarkets.map((market) => (
@@ -1277,7 +1286,11 @@ export function BetsBoard({
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
                         Hjornespark
-                        <InfoTooltip text={"Hier tippst du auf die Gesamtzahl der Hjornespark im Spiel: Unter, genau die Anzahl, oder Über.\n\nBEISPIEL\nMarkt: Hjornespark\nAuswahl: Über 6\n\nIn diesem Beispiel wettest du, dass im Spiel mehr als 6 Hjornespark ausgeführt werden. Um die Wette zu gewinnen, müssen mindestens 7 Hjornespark entstehen."} />
+                        <InfoTooltip
+                          text={
+                            "Wie viele Hjornespark (Eckbälle) gab es insgesamt nach Ende der regulären Spielzeit?\n\nDiese Kategorie erscheint bei uns traditionell auf dänisch."
+                          }
+                        />
                       </h3>
                       <div className="mt-3 space-y-4">
                         {cornersMatrixMarkets.map((market) => {
@@ -1373,7 +1386,11 @@ export function BetsBoard({
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
                         Kort
-                        <InfoTooltip text={"Hier tippst du auf die Gesamtzahl der Kort nach eurer Zählregel: Unter, genau die Anzahl, oder Über.\n\nBEISPIEL\nMarkt: Kort\nAuswahl: Über 4\n\nIn diesem Beispiel wettest du, dass im Spiel mehr als 4 Kort gezählt werden. Um die Wette zu gewinnen, müssen mindestens 5 Kort entstehen."} />
+                        <InfoTooltip
+                          text={
+                            "Wie viele Karten gab es insgesamt nach Ende der regulären Spielzeit? Auch diese Kategorie gibt's auf dänisch.\n\nBei Wetten auf Karten muss man Folgendes wissen:\n\nEine gelbe Karte zählt als eine Karte; eine rote Karte zählt als zwei Karten. Ein Spieler kann maximal drei Karten bekommen.\n\nSehr, sehr wichtig: Karten, die anderen Akteuren als den Spielern (z. B. Trainer, Ersatzspieler oder ausgewechselte Spieler) gezeigt werden, zählen nicht."
+                          }
+                        />
                       </h3>
                       <div className="mt-3 space-y-4">
                         {cardsMatrixMarkets.map((market) => {
@@ -1517,62 +1534,126 @@ export function BetsBoard({
                   {exactScoreMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        Exact Score (0:0 bis 4:4)
-                        <InfoTooltip text={"Bei der Ergebniswette, tippst du auf den korrekten Endstand eines Spiels.\n\nBEISPIEL\nMarkt: Ergebnis\nAuswahl: 2:0\n\nX:X steht für jedes nicht angebotene Ergebnis."} />
+                        Exact Score
+                        <InfoTooltip text={"Was wird der genaue Endstand nach Ende der regulären Spielzeit sein?"} />
                       </h3>
                       <p className="mt-1 text-xs text-zinc-600">
-                        <strong>X:X</strong> ist die Sammelquote für Ergebnisse, bei denen mindestens eine Mannschaft{" "}
-                        <strong>mehr als 4 Tore</strong> erzielt.
+                        <strong>X:X</strong> ist die Sammelquote für Endstände, die nicht als eigene Zeile angeboten
+                        werden.
                       </p>
                       <div className="mt-3 space-y-3">
-                        {exactScoreMarkets.map((market) => (
-                          <div key={market.id} className="rounded-md border bg-white p-3">
-                            <p className="text-sm font-medium text-black">{market.title}</p>
-                            <div className="mt-2 grid gap-2 sm:grid-cols-5">
-                              {sortExactScoreOptions(market.options).map((option) => {
-                                const isSelected = selections.some((item) => item.optionId === option.id);
-                                const pickBlocked =
-                                  isProfiOptionBlocked(match.id, market.type, option.outcome) ||
-                                  isProfiCategoryAlreadyUsed(match.id, market.type) ||
-                                  profiBudgetEmpty;
-                                return (
-                                  <button
-                                    key={option.id}
-                                    type="button"
-                                    disabled={
-                                      !isAuthenticated ||
-                                      oddsViolateMinimumForMarket(market.type, option.odds) ||
-                                      (pickBlocked && !isSelected)
-                                    }
-                                    onClick={() =>
-                                      toggleSelection({
-                                        matchId: match.id,
-                                        matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
-                                        marketTitle: market.title,
-                                        marketType: market.type,
-                                        optionId: option.id,
-                                        outcome: option.outcome,
-                                        odds: option.odds,
-                                      })
-                                    }
-                                    className={`rounded-md border p-2 text-left ${
-                                      isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
-                                    } ${
-                                      isAuthenticated &&
-                                      !oddsViolateMinimumForMarket(market.type, option.odds) &&
-                                      (!pickBlocked || isSelected)
-                                        ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
-                                        : "cursor-not-allowed opacity-70"
-                                    }`}
-                                  >
-                                    <p className="text-sm text-zinc-700">{option.outcome}</p>
-                                    <p className="text-lg font-semibold text-blue-700">{option.odds.toFixed(2)}</p>
-                                  </button>
-                                );
-                              })}
+                        {exactScoreMarkets.map((market) => {
+                          const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
+                          const standardSet = new Set<string>([
+                            ...EXACT_SCORE_ORDERED_OUTCOMES,
+                            EXACT_SCORE_CATCH_ALL_LABEL,
+                          ]);
+                          const legacyOptions = market.options.filter((o) => !standardSet.has(o.outcome));
+
+                          const renderOdd = (option: Option | undefined) => {
+                            if (!option) {
+                              return null;
+                            }
+                            const isSelected = selections.some((item) => item.optionId === option.id);
+                            const pickBlocked =
+                              isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                              isProfiCategoryAlreadyUsed(match.id, market.type) ||
+                              profiBudgetEmpty;
+                            return (
+                              <button
+                                type="button"
+                                disabled={
+                                  !isAuthenticated ||
+                                  oddsViolateMinimumForMarket(market.type, option.odds) ||
+                                  (pickBlocked && !isSelected)
+                                }
+                                onClick={() =>
+                                  toggleSelection({
+                                    matchId: match.id,
+                                    matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                    marketTitle: market.title,
+                                    marketType: market.type,
+                                    optionId: option.id,
+                                    outcome: option.outcome,
+                                    odds: option.odds,
+                                  })
+                                }
+                                className={`w-full rounded-md border p-2 text-left ${
+                                  isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
+                                } ${
+                                  isAuthenticated &&
+                                  !oddsViolateMinimumForMarket(market.type, option.odds) &&
+                                  (!pickBlocked || isSelected)
+                                    ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
+                                    : "cursor-not-allowed opacity-70"
+                                }`}
+                              >
+                                <p className="text-sm text-zinc-700">{option.outcome}</p>
+                                <p className="text-lg font-semibold text-blue-700">{option.odds.toFixed(2)}</p>
+                              </button>
+                            );
+                          };
+
+                          const catchAll = byOutcome.get(EXACT_SCORE_CATCH_ALL_LABEL);
+
+                          return (
+                            <div key={market.id} className="rounded-md border bg-white p-3">
+                              <p className="text-sm font-medium text-black">{market.title}</p>
+                              <div className="mt-3 grid gap-4 md:grid-cols-3">
+                                <div>
+                                  <p className="border-b border-zinc-200 pb-2 text-center text-sm font-semibold text-black">
+                                    {match.homeTeam}
+                                  </p>
+                                  <div className="mt-2 space-y-2">
+                                    {EXACT_SCORE_HOME_WINS.map((outcome) => (
+                                      <Fragment key={outcome}>{renderOdd(byOutcome.get(outcome))}</Fragment>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div>
+                                  <p className="border-b border-zinc-200 pb-2 text-center text-sm font-semibold text-black">
+                                    Unentschieden
+                                  </p>
+                                  <div className="mt-2 space-y-2">
+                                    {EXACT_SCORE_DRAWS.map((outcome) => (
+                                      <Fragment key={outcome}>{renderOdd(byOutcome.get(outcome))}</Fragment>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div>
+                                  <p className="border-b border-zinc-200 pb-2 text-center text-sm font-semibold text-black">
+                                    {match.awayTeam}
+                                  </p>
+                                  <div className="mt-2 space-y-2">
+                                    {EXACT_SCORE_AWAY_WINS.map((outcome) => (
+                                      <Fragment key={outcome}>{renderOdd(byOutcome.get(outcome))}</Fragment>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                              {catchAll ? (
+                                <div className="mt-4 border-t border-zinc-100 pt-3">
+                                  <p className="text-xs font-medium text-zinc-600">
+                                    Sammelquote (nicht gelistete Endstände)
+                                  </p>
+                                  <div className="mt-2 max-w-sm">{renderOdd(catchAll)}</div>
+                                </div>
+                              ) : null}
+                              {legacyOptions.length > 0 ? (
+                                <div className="mt-4 border-t border-zinc-100 pt-3">
+                                  <p className="mb-2 text-xs font-medium text-zinc-600">
+                                    Weitere angebotene Ergebnisse
+                                  </p>
+                                  <div className="grid gap-2 sm:grid-cols-4">
+                                    {sortExactScoreMarketOptions(legacyOptions).map((option) => (
+                                      <Fragment key={option.id}>{renderOdd(option)}</Fragment>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null}
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </section>
                   ) : null}

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { EXACT_SCORE_ORDERED_OUTCOMES } from "@/lib/exact-score";
 import { WORLD_CUP_GROUP_CODES } from "@/lib/world-cup-groups";
 
 export const registerSchema = z.object({
@@ -40,10 +41,10 @@ export const resetPasswordSchema = z.object({
 
 const oddValue = z.coerce.number().positive().max(1000);
 
-/** Keys s00…s44 (Matrix 0:0–4:4) + catchAll für Sammelquote „X:X“. */
-const exactScoreOddsShapeEntries = Array.from({ length: 5 }, (_, h) =>
-  Array.from({ length: 5 }, (_, a) => [`s${h}${a}`, oddValue] as const),
-).flat();
+/** Einzelergebnisse (Heim / Unentschieden / Auswärts) + catchAll für Sammelquote „X:X“. */
+const exactScoreOddsShapeEntries = EXACT_SCORE_ORDERED_OUTCOMES.map(
+  (outcome) => [outcome, oddValue] as const,
+);
 
 export const exactScoreOddsSchema = z.object(
   Object.fromEntries([...exactScoreOddsShapeEntries, ["catchAll", oddValue] as const]) as z.ZodRawShape,

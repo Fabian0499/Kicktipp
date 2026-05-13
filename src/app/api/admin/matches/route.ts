@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { adminCreateMatchSchema } from "@/lib/validation";
+import { EXACT_SCORE_CATCH_ALL_LABEL, EXACT_SCORE_ORDERED_OUTCOMES } from "@/lib/exact-score";
 import { inferWorldCupGroupCode } from "@/lib/world-cup-groups";
 
 export async function POST(request: Request) {
@@ -102,15 +103,12 @@ export async function POST(request: Request) {
       "EXACT_SCORE" as MarketType,
       "Exact Score",
       (() => {
-        const rows: Array<{ outcome: string; odds: number }> = [];
         const es = odds.exactScore as Record<string, number>;
-        for (let h = 0; h <= 4; h += 1) {
-          for (let a = 0; a <= 4; a += 1) {
-            const key = `s${h}${a}`;
-            rows.push({ outcome: `${h}:${a}`, odds: es[key] });
-          }
-        }
-        rows.push({ outcome: "X:X", odds: es.catchAll });
+        const rows: Array<{ outcome: string; odds: number }> = EXACT_SCORE_ORDERED_OUTCOMES.map((outcome) => ({
+          outcome,
+          odds: es[outcome],
+        }));
+        rows.push({ outcome: EXACT_SCORE_CATCH_ALL_LABEL, odds: es.catchAll });
         return rows;
       })(),
     );
