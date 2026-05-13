@@ -136,7 +136,7 @@ export function DashboardSections({
         open={sectionState["closed-bets"]}
         onToggle={(event) => onToggle("closed-bets", (event.currentTarget as HTMLDetailsElement).open)}
       >
-        <summary className="cursor-pointer text-xl font-semibold text-zinc-900">Geschlossene Tipps</summary>
+        <summary className="cursor-pointer text-xl font-semibold text-zinc-900">Beendete Tipps</summary>
         {closedBets.length === 0 ? (
           <p className="mt-3 text-sm text-zinc-600">Aktuell keine geschlossenen Tipps.</p>
         ) : (
