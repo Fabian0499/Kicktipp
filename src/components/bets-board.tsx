@@ -972,253 +972,6 @@ export function BetsBoard({
                     </section>
                   ) : null}
 
-                  {goalsMatrixMarkets.length > 0 || goalMarkets.length > 0 ? (
-                    <section className="rounded-md border bg-white p-3">
-                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        Über / Unter Tore
-                        <InfoTooltip text={"Wähle, ob die Gesamtzahl der von beiden Mannschaften erzielten Tore unter, exakt oder über einer bestimmten Anzahl liegen wird. Der Gewinner und der Verlierer des Spiels spielen keine Rolle.\n\nBEISPIEL\nMarkt: Über/Unter Tore\nAuswahl: Über 1 Tor\n\nIn diesem Beispiel wettest du, dass im Spiel mehr als 1 Tor fällt. Dies bedeutet, dass mindestens 2 Tore geschossen werden müssen."} />
-                      </h3>
-                      <div className="mt-3 space-y-4">
-                        {goalsMatrixMarkets.map((market) => {
-                          const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
-                          const thresholds = goalsMatrixThresholdsFromOutcomes(
-                            market.options.map((o) => o.outcome),
-                          );
-                          const rows = thresholds.map((n) => ({
-                            n,
-                            unter: byOutcome.get(`GOALS:U:${n}`),
-                            exakt: byOutcome.get(`GOALS:E:${n}`),
-                            uber: byOutcome.get(`GOALS:O:${n}`),
-                          }));
-                          return (
-                            <div key={market.id} className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
-                              <table className="w-full min-w-[28rem] border-collapse text-sm">
-                                <thead>
-                                  <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
-                                    <th className="px-2 py-2 font-semibold text-black">Tore</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Unter</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Exakt</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Über</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {rows.map((row) => (
-                                    <tr key={row.n} className="border-b border-zinc-100">
-                                      <td className="px-2 py-1.5 font-medium tabular-nums text-black">{row.n}</td>
-                                      {(["unter", "exakt", "uber"] as const).map((col) => {
-                                        const option = row[col];
-                                        if (!option) {
-                                          return (
-                                            <td key={col} className="px-1 py-1">
-                                              –
-                                            </td>
-                                          );
-                                        }
-                                        const isSelected = selections.some((item) => item.optionId === option.id);
-                                        const pickBlocked =
-                                          isProfiOptionBlocked(match.id, market.type, option.outcome) ||
-                                          isProfiCategoryAlreadyUsed(match.id, market.type) ||
-                                          profiBudgetEmpty;
-                                        return (
-                                          <td key={col} className="px-1 py-1 align-top">
-                                            <button
-                                              type="button"
-                                              disabled={
-                                                !isAuthenticated ||
-                                                oddsViolateMinimumForMarket(market.type, option.odds) ||
-                                                (pickBlocked && !isSelected)
-                                              }
-                                              onClick={() =>
-                                                toggleSelection({
-                                                  matchId: match.id,
-                                                  matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
-                                                  marketTitle: market.title,
-                                                  marketType: market.type,
-                                                  optionId: option.id,
-                                                  outcome: option.outcome,
-                                                  odds: option.odds,
-                                                })
-                                              }
-                                              title={formatGoalsMatrixOutcomeLabel(option.outcome)}
-                                              className={`w-full min-h-[3rem] rounded-md border px-2 py-1.5 text-left ${
-                                                isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
-                                              } ${
-                                                isAuthenticated &&
-                                                !oddsViolateMinimumForMarket(market.type, option.odds) &&
-                                                (!pickBlocked || isSelected)
-                                                  ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
-                                                  : "cursor-not-allowed opacity-70"
-                                              }`}
-                                            >
-                                              <p className="text-lg font-semibold leading-tight text-blue-700">
-                                                {option.odds.toFixed(2)}
-                                              </p>
-                                            </button>
-                                          </td>
-                                        );
-                                      })}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          );
-                        })}
-                        {goalMarkets.map((market) => (
-                          <div key={market.id} className="rounded-md border bg-white p-3">
-                            <p className="text-sm font-medium text-black">{market.title}</p>
-                            <div className="mt-2 grid gap-2 md:grid-cols-2">
-                              {market.options.map((option) => {
-                                const isSelected = selections.some((item) => item.optionId === option.id);
-                                const pickBlocked =
-                                  isProfiOptionBlocked(match.id, market.type, option.outcome) ||
-                                  isProfiCategoryAlreadyUsed(match.id, market.type) ||
-                                  profiBudgetEmpty;
-                                return (
-                                  <button
-                                    key={option.id}
-                                    type="button"
-                                    disabled={
-                                      !isAuthenticated ||
-                                      oddsViolateMinimumForMarket(market.type, option.odds) ||
-                                      (pickBlocked && !isSelected)
-                                    }
-                                    onClick={() =>
-                                      toggleSelection({
-                                        matchId: match.id,
-                                        matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
-                                        marketTitle: market.title,
-                                        marketType: market.type,
-                                        optionId: option.id,
-                                        outcome: option.outcome,
-                                        odds: option.odds,
-                                      })
-                                    }
-                                    className={`rounded-md border p-2 text-left ${
-                                      isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
-                                    } ${
-                                      isAuthenticated &&
-                                      !oddsViolateMinimumForMarket(market.type, option.odds) &&
-                                      (!pickBlocked || isSelected)
-                                        ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
-                                        : "cursor-not-allowed opacity-70"
-                                    }`}
-                                  >
-                                    <p className="text-sm text-zinc-700">{option.outcome}</p>
-                                    <p className="text-lg font-semibold text-blue-700">{option.odds.toFixed(2)}</p>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null}
-
-                  {handicapMatrixMarkets.length > 0 ? (
-                    <section className="rounded-md border bg-white p-3">
-                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        Handicap
-                        <InfoTooltip
-                          text={
-                            "Bei dieser Tippart bekommt ein Team einen fiktiven Vorsprung von einem oder mehreren Toren:\n\nHandicap (2:0) bedeutet, dass Team 1 einen Vorsprung von zwei Toren bekommt,\n\nHandicap (0:1) bedeutet, dass Team 2 einen Vorsprung von einem Tor bekommt\n\nund so weiter.\n\nGetippt wird dann, ob das tatsächliche Ergebnis nach Ende der regulären Spielzeit zusammen mit den fiktiven Toren aus dem Handicap zu einem Sieg von Team 1, zu einem Unentschieden oder zu einem Sieg von Team 2 führt.\n\nWer weiterhin Schwierigkeiten mit dieser Kategorie hat, kann sich gerne an die Admins wenden."
-                          }
-                        />
-                      </h3>
-                      <div className="mt-3 space-y-4">
-                        {handicapMatrixMarkets.map((market) => {
-                          const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
-                          const handicapLines = handicapMatrixLinesFromOutcomes(market.options.map((o) => o.outcome));
-                          return (
-                            <div key={market.id} className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
-                              <table className="w-full min-w-[28rem] border-collapse text-sm">
-                                <thead>
-                                  <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
-                                    <th className="px-2 py-2 font-semibold text-black">Handicap</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Heim ({match.homeTeam})</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Unentschieden</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Auswärts ({match.awayTeam})</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {handicapLines.map((line) => (
-                                    <tr
-                                      key={`${line.homeHandicap}:${line.awayHandicap}`}
-                                      className="border-b border-zinc-100"
-                                    >
-                                      <td className="px-2 py-1.5 font-medium tabular-nums text-black">
-                                        {line.homeHandicap}:{line.awayHandicap}
-                                      </td>
-                                      {(["1", "X", "2"] as const).map((outcome) => {
-                                        const option = byOutcome.get(
-                                          `HANDICAP:${line.homeHandicap}:${line.awayHandicap}:${outcome}`,
-                                        );
-                                        if (!option) {
-                                          return (
-                                            <td key={outcome} className="px-1 py-1">
-                                              –
-                                            </td>
-                                          );
-                                        }
-                                        const isSelected = selections.some((item) => item.optionId === option.id);
-                                        const pickBlocked =
-                                          isProfiOptionBlocked(match.id, market.type, option.outcome) ||
-                                          isProfiCategoryAlreadyUsed(match.id, market.type) ||
-                                          profiBudgetEmpty;
-                                        return (
-                                          <td key={outcome} className="px-1 py-1 align-top">
-                                            <button
-                                              type="button"
-                                              disabled={
-                                                !isAuthenticated ||
-                                                oddsViolateMinimumForMarket(market.type, option.odds) ||
-                                                (pickBlocked && !isSelected)
-                                              }
-                                              onClick={() =>
-                                                toggleSelection({
-                                                  matchId: match.id,
-                                                  matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
-                                                  marketTitle: market.title,
-                                                  marketType: market.type,
-                                                  optionId: option.id,
-                                                  outcome: option.outcome,
-                                                  odds: option.odds,
-                                                })
-                                              }
-                                              title={formatHandicapMatrixOutcomeLabel(
-                                                option.outcome,
-                                                match.homeTeam,
-                                                match.awayTeam,
-                                              )}
-                                              className={`w-full min-h-[3rem] rounded-md border px-2 py-1.5 text-left ${
-                                                isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
-                                              } ${
-                                                isAuthenticated &&
-                                                !oddsViolateMinimumForMarket(market.type, option.odds) &&
-                                                (!pickBlocked || isSelected)
-                                                  ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
-                                                  : "cursor-not-allowed opacity-70"
-                                              }`}
-                                            >
-                                              <p className="text-lg font-semibold leading-tight text-blue-700">
-                                                {option.odds.toFixed(2)}
-                                              </p>
-                                            </button>
-                                          </td>
-                                        );
-                                      })}
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  ) : null}
-
                   {halfTimeFullTimeMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
@@ -1530,6 +1283,254 @@ export function BetsBoard({
                       </div>
                     </section>
                   ))}
+
+
+                  {goalsMatrixMarkets.length > 0 || goalMarkets.length > 0 ? (
+                    <section className="rounded-md border bg-white p-3">
+                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                        Über / Unter Tore
+                        <InfoTooltip text={"Wähle, ob die Gesamtzahl der von beiden Mannschaften erzielten Tore unter, exakt oder über einer bestimmten Anzahl liegen wird. Der Gewinner und der Verlierer des Spiels spielen keine Rolle.\n\nBEISPIEL\nMarkt: Über/Unter Tore\nAuswahl: Über 1 Tor\n\nIn diesem Beispiel wettest du, dass im Spiel mehr als 1 Tor fällt. Dies bedeutet, dass mindestens 2 Tore geschossen werden müssen."} />
+                      </h3>
+                      <div className="mt-3 space-y-4">
+                        {goalsMatrixMarkets.map((market) => {
+                          const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
+                          const thresholds = goalsMatrixThresholdsFromOutcomes(
+                            market.options.map((o) => o.outcome),
+                          );
+                          const rows = thresholds.map((n) => ({
+                            n,
+                            unter: byOutcome.get(`GOALS:U:${n}`),
+                            exakt: byOutcome.get(`GOALS:E:${n}`),
+                            uber: byOutcome.get(`GOALS:O:${n}`),
+                          }));
+                          return (
+                            <div key={market.id} className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
+                              <table className="w-full min-w-[28rem] border-collapse text-sm">
+                                <thead>
+                                  <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
+                                    <th className="px-2 py-2 font-semibold text-black">Tore</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Unter</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Exakt</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Über</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {rows.map((row) => (
+                                    <tr key={row.n} className="border-b border-zinc-100">
+                                      <td className="px-2 py-1.5 font-medium tabular-nums text-black">{row.n}</td>
+                                      {(["unter", "exakt", "uber"] as const).map((col) => {
+                                        const option = row[col];
+                                        if (!option) {
+                                          return (
+                                            <td key={col} className="px-1 py-1">
+                                              –
+                                            </td>
+                                          );
+                                        }
+                                        const isSelected = selections.some((item) => item.optionId === option.id);
+                                        const pickBlocked =
+                                          isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                                          isProfiCategoryAlreadyUsed(match.id, market.type) ||
+                                          profiBudgetEmpty;
+                                        return (
+                                          <td key={col} className="px-1 py-1 align-top">
+                                            <button
+                                              type="button"
+                                              disabled={
+                                                !isAuthenticated ||
+                                                oddsViolateMinimumForMarket(market.type, option.odds) ||
+                                                (pickBlocked && !isSelected)
+                                              }
+                                              onClick={() =>
+                                                toggleSelection({
+                                                  matchId: match.id,
+                                                  matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                                  marketTitle: market.title,
+                                                  marketType: market.type,
+                                                  optionId: option.id,
+                                                  outcome: option.outcome,
+                                                  odds: option.odds,
+                                                })
+                                              }
+                                              title={formatGoalsMatrixOutcomeLabel(option.outcome)}
+                                              className={`w-full min-h-[3rem] rounded-md border px-2 py-1.5 text-left ${
+                                                isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
+                                              } ${
+                                                isAuthenticated &&
+                                                !oddsViolateMinimumForMarket(market.type, option.odds) &&
+                                                (!pickBlocked || isSelected)
+                                                  ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
+                                                  : "cursor-not-allowed opacity-70"
+                                              }`}
+                                            >
+                                              <p className="text-lg font-semibold leading-tight text-blue-700">
+                                                {option.odds.toFixed(2)}
+                                              </p>
+                                            </button>
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        })}
+                        {goalMarkets.map((market) => (
+                          <div key={market.id} className="rounded-md border bg-white p-3">
+                            <p className="text-sm font-medium text-black">{market.title}</p>
+                            <div className="mt-2 grid gap-2 md:grid-cols-2">
+                              {market.options.map((option) => {
+                                const isSelected = selections.some((item) => item.optionId === option.id);
+                                const pickBlocked =
+                                  isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                                  isProfiCategoryAlreadyUsed(match.id, market.type) ||
+                                  profiBudgetEmpty;
+                                return (
+                                  <button
+                                    key={option.id}
+                                    type="button"
+                                    disabled={
+                                      !isAuthenticated ||
+                                      oddsViolateMinimumForMarket(market.type, option.odds) ||
+                                      (pickBlocked && !isSelected)
+                                    }
+                                    onClick={() =>
+                                      toggleSelection({
+                                        matchId: match.id,
+                                        matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                        marketTitle: market.title,
+                                        marketType: market.type,
+                                        optionId: option.id,
+                                        outcome: option.outcome,
+                                        odds: option.odds,
+                                      })
+                                    }
+                                    className={`rounded-md border p-2 text-left ${
+                                      isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
+                                    } ${
+                                      isAuthenticated &&
+                                      !oddsViolateMinimumForMarket(market.type, option.odds) &&
+                                      (!pickBlocked || isSelected)
+                                        ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
+                                        : "cursor-not-allowed opacity-70"
+                                    }`}
+                                  >
+                                    <p className="text-sm text-zinc-700">{option.outcome}</p>
+                                    <p className="text-lg font-semibold text-blue-700">{option.odds.toFixed(2)}</p>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+
+                  {handicapMatrixMarkets.length > 0 ? (
+                    <section className="rounded-md border bg-white p-3">
+                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                        Handicap
+                        <InfoTooltip
+                          text={
+                            "Bei dieser Tippart bekommt ein Team einen fiktiven Vorsprung von einem oder mehreren Toren:\n\nHandicap (2:0) bedeutet, dass Team 1 einen Vorsprung von zwei Toren bekommt,\n\nHandicap (0:1) bedeutet, dass Team 2 einen Vorsprung von einem Tor bekommt\n\nund so weiter.\n\nGetippt wird dann, ob das tatsächliche Ergebnis nach Ende der regulären Spielzeit zusammen mit den fiktiven Toren aus dem Handicap zu einem Sieg von Team 1, zu einem Unentschieden oder zu einem Sieg von Team 2 führt.\n\nWer weiterhin Schwierigkeiten mit dieser Kategorie hat, kann sich gerne an die Admins wenden."
+                          }
+                        />
+                      </h3>
+                      <div className="mt-3 space-y-4">
+                        {handicapMatrixMarkets.map((market) => {
+                          const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
+                          const handicapLines = handicapMatrixLinesFromOutcomes(market.options.map((o) => o.outcome));
+                          return (
+                            <div key={market.id} className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
+                              <table className="w-full min-w-[28rem] border-collapse text-sm">
+                                <thead>
+                                  <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
+                                    <th className="px-2 py-2 font-semibold text-black">Handicap</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Heim ({match.homeTeam})</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Unentschieden</th>
+                                    <th className="px-2 py-2 font-semibold text-black">Auswärts ({match.awayTeam})</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {handicapLines.map((line) => (
+                                    <tr
+                                      key={`${line.homeHandicap}:${line.awayHandicap}`}
+                                      className="border-b border-zinc-100"
+                                    >
+                                      <td className="px-2 py-1.5 font-medium tabular-nums text-black">
+                                        {line.homeHandicap}:{line.awayHandicap}
+                                      </td>
+                                      {(["1", "X", "2"] as const).map((outcome) => {
+                                        const option = byOutcome.get(
+                                          `HANDICAP:${line.homeHandicap}:${line.awayHandicap}:${outcome}`,
+                                        );
+                                        if (!option) {
+                                          return (
+                                            <td key={outcome} className="px-1 py-1">
+                                              –
+                                            </td>
+                                          );
+                                        }
+                                        const isSelected = selections.some((item) => item.optionId === option.id);
+                                        const pickBlocked =
+                                          isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                                          isProfiCategoryAlreadyUsed(match.id, market.type) ||
+                                          profiBudgetEmpty;
+                                        return (
+                                          <td key={outcome} className="px-1 py-1 align-top">
+                                            <button
+                                              type="button"
+                                              disabled={
+                                                !isAuthenticated ||
+                                                oddsViolateMinimumForMarket(market.type, option.odds) ||
+                                                (pickBlocked && !isSelected)
+                                              }
+                                              onClick={() =>
+                                                toggleSelection({
+                                                  matchId: match.id,
+                                                  matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                                  marketTitle: market.title,
+                                                  marketType: market.type,
+                                                  optionId: option.id,
+                                                  outcome: option.outcome,
+                                                  odds: option.odds,
+                                                })
+                                              }
+                                              title={formatHandicapMatrixOutcomeLabel(
+                                                option.outcome,
+                                                match.homeTeam,
+                                                match.awayTeam,
+                                              )}
+                                              className={`w-full min-h-[3rem] rounded-md border px-2 py-1.5 text-left ${
+                                                isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
+                                              } ${
+                                                isAuthenticated &&
+                                                !oddsViolateMinimumForMarket(market.type, option.odds) &&
+                                                (!pickBlocked || isSelected)
+                                                  ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
+                                                  : "cursor-not-allowed opacity-70"
+                                              }`}
+                                            >
+                                              <p className="text-lg font-semibold leading-tight text-blue-700">
+                                                {option.odds.toFixed(2)}
+                                              </p>
+                                            </button>
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ) : null}
 
                   {exactScoreMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">

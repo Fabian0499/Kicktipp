@@ -19,7 +19,7 @@ const marketOrder: Record<string, number> = {
   HALF_TIME_FULL_TIME: 51,
   CORNERS_MATRIX: 55,
   CARDS_MATRIX: 56,
-  EXACT_SCORE: 60,
+  EXACT_SCORE: 999,
 };
 
 export default async function BetsPage() {
