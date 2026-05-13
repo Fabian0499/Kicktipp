@@ -9,7 +9,7 @@ export const registerSchema = z.object({
     .trim()
     .min(3)
     .max(24)
-    .regex(/^[a-zA-Z0-9_]+$/, "Nur Buchstaben, Zahlen und Unterstrich erlaubt."),
+    .regex(/^[a-zA-Z0-9_ ]+$/, "Nur Buchstaben, Zahlen, Leerzeichen und Unterstrich erlaubt."),
   password: z
     .string()
     .min(8)
