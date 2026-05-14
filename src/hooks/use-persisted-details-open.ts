@@ -4,8 +4,10 @@ import { useCallback, useLayoutEffect, useRef, useState, type SyntheticEvent } f
 
 /**
  * Persists <details> open state in sessionStorage. Reads storage in useLayoutEffect (before paint)
- * and ignores toggle-driven writes until then so early/spurious toggle events cannot overwrite
- * a saved "closed" value with "true".
+ * and applies it synchronously so the first paint matches storage (avoids stray toggle events
+ * after reload — e.g. admin Auswertung → location.reload — overwriting "false" with "true").
+ * Persisting user toggles is enabled only after a later microtask so layout-driven updates cannot
+ * race with spurious toggles from the wrong initial open state.
  */
 export function usePersistedDetailsOpen(storageKey: string, defaultOpen = true) {
   const [open, setOpen] = useState(defaultOpen);
@@ -22,10 +24,10 @@ export function usePersistedDetailsOpen(storageKey: string, defaultOpen = true) 
     } catch {
       /* ignore */
     }
+    if (storedOpen !== null) {
+      setOpen(storedOpen);
+    }
     queueMicrotask(() => {
-      if (storedOpen !== null) {
-        setOpen(storedOpen);
-      }
       allowPersist.current = true;
     });
   }, [storageKey]);
