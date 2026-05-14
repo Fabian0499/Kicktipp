@@ -5,10 +5,12 @@ import { AdminMatchForm } from "@/components/admin-match-form";
 import { AdminMatchOddsEditor } from "@/components/admin-match-odds-editor";
 import { AdminPointsAdjustment } from "@/components/admin-points-adjustment";
 import { AdminResultSettlementSection } from "@/components/admin-result-settlement-section";
+import { AdminLeaderboardVisibility } from "@/components/admin-leaderboard-visibility";
 import { AdminUserApprovals } from "@/components/admin-user-approvals";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sortMarketOptions } from "@/lib/market-option-order";
+import { qualifyMarketUsesMethodMatrix } from "@/lib/to-qualify-method";
 import { WM_WINNER_EVENT_KEY } from "@/lib/wm-winner";
 
 export default async function AdminPage() {
@@ -82,22 +84,32 @@ export default async function AdminPage() {
           }))}
       />
       <AdminResultSettlementSection
-        matches={matches.map((match) => ({
-          id: match.id,
-          homeTeam: match.homeTeam,
-          awayTeam: match.awayTeam,
-          startsAt: match.startsAt.toISOString(),
-          homeHalfTimeScore:
-            (match as unknown as { homeHalfTimeScore?: number | null }).homeHalfTimeScore ?? null,
-          awayHalfTimeScore:
-            (match as unknown as { awayHalfTimeScore?: number | null }).awayHalfTimeScore ?? null,
-          homeScore: (match as unknown as { homeScore?: number | null }).homeScore ?? null,
-          awayScore: (match as unknown as { awayScore?: number | null }).awayScore ?? null,
-          settledAt:
-            (match as unknown as { settledAt?: Date | null }).settledAt?.toISOString() ?? null,
-          totalCards: (match as unknown as { totalCards?: number | null }).totalCards ?? null,
-          totalCorners: (match as unknown as { totalCorners?: number | null }).totalCorners ?? null,
-        }))}
+        matches={matches.map((match) => {
+          const qualifyMarket = match.markets.find((m) => m.type === "TO_QUALIFY");
+          const usesQualifyMethodMatrix = qualifyMarket
+            ? qualifyMarketUsesMethodMatrix(
+                sortMarketOptions(qualifyMarket.type, qualifyMarket.options).map((o) => ({ outcome: o.outcome })),
+              )
+            : false;
+          return {
+            id: match.id,
+            homeTeam: match.homeTeam,
+            awayTeam: match.awayTeam,
+            startsAt: match.startsAt.toISOString(),
+            isKnockout: match.isKnockout,
+            usesQualifyMethodMatrix,
+            homeHalfTimeScore:
+              (match as unknown as { homeHalfTimeScore?: number | null }).homeHalfTimeScore ?? null,
+            awayHalfTimeScore:
+              (match as unknown as { awayHalfTimeScore?: number | null }).awayHalfTimeScore ?? null,
+            homeScore: (match as unknown as { homeScore?: number | null }).homeScore ?? null,
+            awayScore: (match as unknown as { awayScore?: number | null }).awayScore ?? null,
+            settledAt:
+              (match as unknown as { settledAt?: Date | null }).settledAt?.toISOString() ?? null,
+            totalCards: (match as unknown as { totalCards?: number | null }).totalCards ?? null,
+            totalCorners: (match as unknown as { totalCorners?: number | null }).totalCorners ?? null,
+          };
+        })}
       />
       <AdminUserApprovals
         users={pendingUsers.map((entry) => ({
@@ -112,6 +124,13 @@ export default async function AdminPage() {
           id: entry.id,
           label: `${entry.username ?? entry.email} - ${entry.email}`,
           balance: entry.wallet?.balance ?? 0,
+        }))}
+      />
+      <AdminLeaderboardVisibility
+        users={users.map((entry) => ({
+          id: entry.id,
+          label: `${entry.username ?? entry.email} - ${entry.email}`,
+          hiddenFromLeaderboard: entry.hiddenFromLeaderboard,
         }))}
       />
       {wmEvent ? (

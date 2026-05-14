@@ -41,13 +41,13 @@ export const resetPasswordSchema = z.object({
 
 const oddValue = z.coerce.number().positive().max(1000);
 
-/** Einzelergebnisse (Heim / Unentschieden / Auswärts) + catchAll für Sammelquote „X:X“. */
+/** Einzelergebnisse (Heim / Unentschieden / Auswärts), je eine Quote. */
 const exactScoreOddsShapeEntries = EXACT_SCORE_ORDERED_OUTCOMES.map(
   (outcome) => [outcome, oddValue] as const,
 );
 
 export const exactScoreOddsSchema = z.object(
-  Object.fromEntries([...exactScoreOddsShapeEntries, ["catchAll", oddValue] as const]) as z.ZodRawShape,
+  Object.fromEntries(exactScoreOddsShapeEntries) as z.ZodRawShape,
 );
 
 export const adminCreateMatchSchema = z.object({
@@ -129,8 +129,10 @@ export const adminCreateMatchSchema = z.object({
       .max(15),
     toQualify: z
       .object({
-        home: oddValue,
-        away: oddValue,
+        homeEt: oddValue,
+        awayEt: oddValue,
+        homePen: oddValue,
+        awayPen: oddValue,
       })
       .optional(),
   }),
@@ -139,10 +141,13 @@ export const adminCreateMatchSchema = z.object({
     (data) =>
       !data.isKnockout ||
       (data.odds.toQualify !== undefined &&
-        data.odds.toQualify.home >= 1.01 &&
-        data.odds.toQualify.away >= 1.01),
+        data.odds.toQualify.homeEt >= 1.01 &&
+        data.odds.toQualify.awayEt >= 1.01 &&
+        data.odds.toQualify.homePen >= 1.01 &&
+        data.odds.toQualify.awayPen >= 1.01),
     {
-      message: "Bei KO-Spielen sind Quoten für „Qualifiziert sich“ (Heim/Gast) erforderlich.",
+      message:
+        "Bei KO-Spielen sind vier Quoten für „Methode des Sieges“ (Verlängerung & Elfmeter je Heim/Gast) erforderlich.",
       path: ["odds", "toQualify"],
     },
   )
@@ -319,6 +324,10 @@ export const settleMatchSchema = z.object({
   totalCards: z.coerce.number().int().min(0).max(50),
   /** Summe Eckbälle (einheitliche Zählung) */
   totalCorners: z.coerce.number().int().min(0).max(50),
+  /** Nur bei KO mit Markt „Methode des Sieges“ (4 Optionen): wie fiel die Entscheidung? */
+  knockoutDecidedBy: z.enum(["REGULATION", "EXTRA_TIME", "PENALTIES"]).optional(),
+  /** Bei unentschiedenem Endstand: welche Mannschaft ist weiter (nur für Elfmeterschießen nötig)? */
+  knockoutAdvancingIsHome: z.boolean().optional(),
 });
 
 export const adminAdjustPointsSchema = z.object({
@@ -326,4 +335,8 @@ export const adminAdjustPointsSchema = z.object({
   mode: z.enum(["credit", "debit"]),
   amount: z.coerce.number().int().min(1).max(5000),
   reason: z.string().trim().min(3).max(120),
+});
+
+export const adminLeaderboardVisibilitySchema = z.object({
+  hiddenFromLeaderboard: z.boolean(),
 });

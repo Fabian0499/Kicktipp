@@ -5,7 +5,7 @@ import { formatCardsMatrixOutcomeLabel } from "@/lib/cards-market";
 import { formatCornersMatrixOutcomeLabel } from "@/lib/corners-market";
 import { formatGoalsMatrixOutcomeLabel } from "@/lib/goals-market";
 import { formatHandicapMatrixOutcomeLabel } from "@/lib/handicap-market";
-import { formatOneXTwoDisplayLabel } from "@/lib/one-x-two-display";
+import { formatHalfTimeFullTimeDisplayLabel, formatOneXTwoDisplayLabel } from "@/lib/one-x-two-display";
 import { usePersistedDetailsOpen } from "@/hooks/use-persisted-details-open";
 
 const STORAGE_KEY = "kicktipp-admin-match-odds-editor-open";
@@ -36,6 +36,9 @@ function displayOutcomeLabel(marketType: string, outcome: string, homeTeam: stri
   if (marketType === "ONE_X_TWO") {
     return formatOneXTwoDisplayLabel(outcome, homeTeam, awayTeam);
   }
+  if (marketType === "HALF_TIME_FULL_TIME") {
+    return formatHalfTimeFullTimeDisplayLabel(outcome, homeTeam, awayTeam);
+  }
   if (marketType === "HANDICAP_MATRIX") {
     return formatHandicapMatrixOutcomeLabel(outcome, homeTeam, awayTeam);
   }
@@ -51,6 +54,10 @@ function displayOutcomeLabel(marketType: string, outcome: string, homeTeam: stri
   if (marketType === "TO_QUALIFY") {
     if (outcome === "1") return `${homeTeam} (1)`;
     if (outcome === "2") return `${awayTeam} (2)`;
+    if (outcome === "QUALIFY:ET:1") return `Verlängerung – ${homeTeam}`;
+    if (outcome === "QUALIFY:ET:2") return `Verlängerung – ${awayTeam}`;
+    if (outcome === "QUALIFY:PEN:1") return `Elfmeter – ${homeTeam}`;
+    if (outcome === "QUALIFY:PEN:2") return `Elfmeter – ${awayTeam}`;
   }
   return outcome;
 }

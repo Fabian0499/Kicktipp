@@ -1,4 +1,5 @@
 import type { MarketType } from "@prisma/client";
+import { handicapMatrixOutcomeWins } from "@/lib/handicap-market";
 
 /** Full-time 1X2 outcome atoms */
 export type FtAtom = "H" | "D" | "A";
@@ -50,7 +51,39 @@ function ftCoverage(bet: BetConflictInput): Set<FtAtom> | null {
   if (bet.marketType === "TO_QUALIFY") {
     return parseOneXTwoOutcome(bet.outcomeLabel);
   }
+  if (bet.marketType === "HANDICAP_MATRIX") {
+    return handicapMatrixFtCoverage(bet.outcomeLabel);
+  }
   return null;
+}
+
+const HANDICAP_FT_SCAN_MAX = 25;
+
+/**
+ * Menge der regulären Endergebnis-Typen (H/D/A), für die diese Handicap-Wette gewinnen kann.
+ * Dient der Absicherungsprüfung mit 1X2 / Doppelchance / weiterem Handicap.
+ */
+function handicapMatrixFtCoverage(outcomeLabel: string): Set<FtAtom> | null {
+  if (!/^HANDICAP:\d+:\d+:[1X2]$/i.test(outcomeLabel.trim())) {
+    return null;
+  }
+  const covered = new Set<FtAtom>();
+  const max = HANDICAP_FT_SCAN_MAX;
+  for (let home = 0; home <= max; home += 1) {
+    for (let away = 0; away <= max; away += 1) {
+      if (!handicapMatrixOutcomeWins(outcomeLabel, home, away)) {
+        continue;
+      }
+      if (home > away) {
+        covered.add("H");
+      } else if (home < away) {
+        covered.add("A");
+      } else {
+        covered.add("D");
+      }
+    }
+  }
+  return covered.size > 0 ? covered : null;
 }
 
 function isOverUnderType(type: MarketType): boolean {
@@ -85,6 +118,11 @@ function parseBothTeamsPolarity(outcomeLabel: string): "JA" | "NEIN" | null {
     return "NEIN";
   }
   return null;
+}
+
+function isQualifyMethodOutcomeLabel(outcome: string): boolean {
+  const o = normalizeOutcome(outcome);
+  return o.startsWith("qualify:et:") || o.startsWith("qualify:pen:");
 }
 
 /** CARDS:CORNERS-Kachel: PREFIX:U|O|E:n */
@@ -176,6 +214,13 @@ export function profiBetsMutuallyAbsorbing(a: BetConflictInput, b: BetConflictIn
     const oa = normalizeOutcome(a.outcomeLabel);
     const ob = normalizeOutcome(b.outcomeLabel);
     if ((oa === "1" && ob === "2") || (oa === "2" && ob === "1")) {
+      return true;
+    }
+    if (
+      isQualifyMethodOutcomeLabel(a.outcomeLabel) &&
+      isQualifyMethodOutcomeLabel(b.outcomeLabel) &&
+      oa !== ob
+    ) {
       return true;
     }
   }

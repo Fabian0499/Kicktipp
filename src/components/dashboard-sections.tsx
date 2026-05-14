@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatGoalsMatrixOutcomeLabel } from "@/lib/goals-market";
 import { formatHandicapMatrixOutcomeLabel } from "@/lib/handicap-market";
-import { formatOneXTwoDisplayLabel } from "@/lib/one-x-two-display";
+import { formatHalfTimeFullTimeDisplayLabel, formatOneXTwoDisplayLabel } from "@/lib/one-x-two-display";
+import { formatToQualifyOutcomeDisplay } from "@/lib/to-qualify-method";
 
 type BetRow = {
   id: string;
@@ -53,11 +54,17 @@ function displayOutcomeLabel(marketType: string, outcome: string, homeLabel?: st
   if (marketType === "ONE_X_TWO") {
     return formatOneXTwoDisplayLabel(outcome, homeLabel ?? "", awayLabel ?? "");
   }
+  if (marketType === "HALF_TIME_FULL_TIME") {
+    return formatHalfTimeFullTimeDisplayLabel(outcome, homeLabel ?? "", awayLabel ?? "");
+  }
   if (marketType === "HANDICAP_MATRIX") {
     return formatHandicapMatrixOutcomeLabel(outcome, homeLabel, awayLabel);
   }
   if (marketType === "GOALS_MATRIX") {
     return formatGoalsMatrixOutcomeLabel(outcome);
+  }
+  if (marketType === "TO_QUALIFY") {
+    return formatToQualifyOutcomeDisplay(outcome, homeLabel ?? "", awayLabel ?? "");
   }
   return outcome;
 }

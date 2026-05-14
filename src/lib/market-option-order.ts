@@ -7,7 +7,14 @@ type MarketOptionLike = {
 
 const OUTCOME_ORDER: Record<string, string[]> = {
   ONE_X_TWO: ["1", "X", "2"],
-  TO_QUALIFY: ["1", "2"],
+  TO_QUALIFY: [
+    "QUALIFY:ET:1",
+    "QUALIFY:ET:2",
+    "QUALIFY:PEN:1",
+    "QUALIFY:PEN:2",
+    "1",
+    "2",
+  ],
   BOTH_TEAMS_TO_SCORE: ["Ja", "Nein"],
   HALF_TIME_FULL_TIME: ["1/1", "1/X", "1/2", "X/1", "X/X", "X/2", "2/1", "2/X", "2/2"],
 };

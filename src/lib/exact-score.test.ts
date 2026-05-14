@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  EXACT_SCORE_CATCH_ALL_LABEL,
-  exactScoreOutcomeForPrediction,
-  winningExactScoreOutcomes,
-} from "./exact-score";
+import { exactScoreOutcomeForPrediction, winningExactScoreOutcomes } from "./exact-score";
 
 describe("winningExactScoreOutcomes", () => {
   it("liefert konkrete Zeile, wenn sie angeboten wird", () => {
@@ -11,10 +7,10 @@ describe("winningExactScoreOutcomes", () => {
     expect(winningExactScoreOutcomes(5, 0)).toEqual(["5:0"]);
   });
 
-  it("Ergebnisse ohne eigene Zeile → X:X", () => {
-    expect(winningExactScoreOutcomes(5, 5)).toEqual([EXACT_SCORE_CATCH_ALL_LABEL]);
-    expect(winningExactScoreOutcomes(7, 0)).toEqual([EXACT_SCORE_CATCH_ALL_LABEL]);
-    expect(winningExactScoreOutcomes(3, 5)).toEqual([EXACT_SCORE_CATCH_ALL_LABEL]);
+  it("Ergebnisse ohne eigene Zeile → kein Treffer (keine Sammelquote mehr)", () => {
+    expect(winningExactScoreOutcomes(5, 5)).toEqual([]);
+    expect(winningExactScoreOutcomes(7, 0)).toEqual([]);
+    expect(winningExactScoreOutcomes(3, 5)).toEqual([]);
   });
 
   it("4:4 ist Unentschieden mit eigener Zeile", () => {
@@ -23,8 +19,9 @@ describe("winningExactScoreOutcomes", () => {
 });
 
 describe("exactScoreOutcomeForPrediction", () => {
-  it("mappt Vorhersagen auf konkrete oder Sammel-Zeile", () => {
+  it("liefert immer das erwartete Ergebnis als Label", () => {
     expect(exactScoreOutcomeForPrediction(3, 3)).toBe("3:3");
     expect(exactScoreOutcomeForPrediction(4, 4)).toBe("4:4");
+    expect(exactScoreOutcomeForPrediction(7, 0)).toBe("7:0");
   });
 });

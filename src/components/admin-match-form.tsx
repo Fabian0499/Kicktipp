@@ -67,9 +67,7 @@ export function AdminMatchForm() {
           twoTwo: Number(formData.get("oddHtFt22")),
         },
         exactScore: (() => {
-          const row: Record<string, number> = {
-            catchAll: Number(formData.get("esCatchAll")),
-          };
+          const row: Record<string, number> = {};
           for (const outcome of EXACT_SCORE_ORDERED_OUTCOMES) {
             const fieldKey = `es_${outcome.replace(":", "_")}`;
             row[outcome] = Number(formData.get(fieldKey));
@@ -156,8 +154,10 @@ export function AdminMatchForm() {
         ...(String(formData.get("isKnockout") ?? "no") === "yes"
           ? {
               toQualify: {
-                home: Number(formData.get("oddQualifyHome")),
-                away: Number(formData.get("oddQualifyAway")),
+                homeEt: Number(formData.get("oddQualifyHomeEt")),
+                awayEt: Number(formData.get("oddQualifyAwayEt")),
+                homePen: Number(formData.get("oddQualifyHomePen")),
+                awayPen: Number(formData.get("oddQualifyAwayPen")),
               },
             }
           : {}),
@@ -289,15 +289,17 @@ export function AdminMatchForm() {
 
       {isKnockout ? (
         <fieldset className="rounded-md border p-3">
-          <legend className="px-2 text-sm font-semibold">Qualifiziert sich</legend>
+          <legend className="px-2 text-sm font-semibold">Methode des Sieges</legend>
           <p className="text-xs text-zinc-600">
-            Quote für das Team, das in die nächste Runde einzieht (Sieger der Partie nach eingetragenem Endstand).
+            Vier Quoten: Sieg in der Verlängerung bzw. nach Elfmeterschießen je Heim- und Gastmannschaft. Bei der
+            Auswertung gibst du an, ob die Partie in der regulären Zeit, in der Verlängerung oder erst im Elfmeterschießen
+            entschieden wurde.
           </p>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-zinc-800">Heim qualifiziert sich (1)</label>
+              <label className="block text-xs font-medium text-zinc-800">In Verlängerung – Heim</label>
               <input
-                name="oddQualifyHome"
+                name="oddQualifyHomeEt"
                 type="number"
                 step="0.01"
                 min="1.01"
@@ -308,9 +310,35 @@ export function AdminMatchForm() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-zinc-800">Gast qualifiziert sich (2)</label>
+              <label className="block text-xs font-medium text-zinc-800">In Verlängerung – Gast</label>
               <input
-                name="oddQualifyAway"
+                name="oddQualifyAwayEt"
+                type="number"
+                step="0.01"
+                min="1.01"
+                max={1000}
+                required={isKnockout}
+                placeholder="Quote"
+                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-800">Nach Elfmeterschießen – Heim</label>
+              <input
+                name="oddQualifyHomePen"
+                type="number"
+                step="0.01"
+                min="1.01"
+                max={1000}
+                required={isKnockout}
+                placeholder="Quote"
+                className="mt-1 w-full rounded-md border border-zinc-300 bg-white px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-800">Nach Elfmeterschießen – Gast</label>
+              <input
+                name="oddQualifyAwayPen"
                 type="number"
                 step="0.01"
                 min="1.01"
@@ -352,8 +380,7 @@ export function AdminMatchForm() {
         <fieldset className="rounded-md border p-3 md:col-span-2">
           <legend className="px-2 text-sm font-semibold">Exact Score</legend>
           <p className="mb-3 text-xs text-zinc-600">
-            Drei Spalten: Heimsiege, Unentschieden, Auswärtssiege (Format <strong>Heim : Gast</strong>).{" "}
-            <strong>X:X</strong> ist die Sammelquote für jedes Ergebnis, das nicht als eigene Zeile angeboten wird.
+            Drei Spalten: Heimsiege, Unentschieden, Auswärtssiege (Format <strong>Heim : Gast</strong>).
           </p>
           <div className="mt-3 grid gap-4 md:grid-cols-3">
             <div>
@@ -415,18 +442,6 @@ export function AdminMatchForm() {
                 ))}
               </div>
             </div>
-          </div>
-          <div className="mt-4">
-            <label className="block text-xs font-semibold text-zinc-800">Sammelquote X:X</label>
-            <input
-              name="esCatchAll"
-              type="number"
-              step="0.01"
-              min="1.01"
-              placeholder="X:X"
-              required
-              className="mt-1 w-full max-w-xs rounded-md border border-zinc-300 px-3 py-2"
-            />
           </div>
         </fieldset>
 

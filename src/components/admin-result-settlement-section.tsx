@@ -10,6 +10,8 @@ type MatchItem = {
   homeTeam: string;
   awayTeam: string;
   startsAt: string;
+  isKnockout: boolean;
+  usesQualifyMethodMatrix: boolean;
   homeHalfTimeScore: number | null;
   awayHalfTimeScore: number | null;
   homeScore: number | null;

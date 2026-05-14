@@ -52,9 +52,7 @@ export const EXACT_SCORE_ORDERED_OUTCOMES = [
 
 const EXACT_SCORE_EXPLICIT = new Set<string>(EXACT_SCORE_ORDERED_OUTCOMES);
 
-/**
- * Option „X:X“ = Sammelquote für jedes Ergebnis, das nicht als eigene Zeile angeboten wird.
- */
+/** Frühere Sammelquote „X:X“ (nur noch für Sortierung / alte Marktdaten). */
 export const EXACT_SCORE_CATCH_ALL_LABEL = "X:X";
 
 export function winningExactScoreOutcomes(homeScore: number, awayScore: number): string[] {
@@ -62,12 +60,12 @@ export function winningExactScoreOutcomes(homeScore: number, awayScore: number):
   if (EXACT_SCORE_EXPLICIT.has(label)) {
     return [label];
   }
-  return [EXACT_SCORE_CATCH_ALL_LABEL];
+  return [];
 }
 
-/** Für Einfach-Tipp: welche Markt-Outcome-Zeile passt zur Vorhersage? */
+/** Für Einfach-Tipp: Outcome-Label = erwarteter Endstand (muss als Marktoption existieren). */
 export function exactScoreOutcomeForPrediction(predictedHome: number, predictedAway: number): string {
-  return winningExactScoreOutcomes(predictedHome, predictedAway)[0];
+  return `${predictedHome}:${predictedAway}`;
 }
 
 /** Sortier-Index für Marktoptionen (kleiner = weiter oben in der Gesamtliste). */

@@ -11,6 +11,7 @@ function leaderboardDisplayLabel(username: string | null, email: string): string
 export default async function LeaderboardPage() {
   const currentUser = await getCurrentUser();
   const users = await db.user.findMany({
+    where: { hiddenFromLeaderboard: false },
     include: {
       wallet: true,
     },
@@ -27,8 +28,9 @@ export default async function LeaderboardPage() {
       avatarUrl: user.avatarUrl,
     }))
     .sort((a, b) => b.points - a.points);
-  const currentUserRank =
-    currentUser && ranking.length > 0 ? ranking.findIndex((entry) => entry.id === currentUser.id) + 1 : null;
+  const rankIndex = currentUser ? ranking.findIndex((entry) => entry.id === currentUser.id) : -1;
+  const currentUserRank = rankIndex >= 0 ? rankIndex + 1 : null;
+  const isHiddenFromLeaderboard = currentUser?.hiddenFromLeaderboard === true;
 
   return (
     <main
@@ -40,12 +42,18 @@ export default async function LeaderboardPage() {
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-3xl font-bold text-white">Rangliste</h1>
           <p className="rounded-md border border-white/40 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white">
-            Derzeitiger Rang: {currentUserRank ?? "-"} / {ranking.length}
+            Derzeitiger Rang: {isHiddenFromLeaderboard ? "—" : (currentUserRank ?? "-")} / {ranking.length}
           </p>
         </div>
         <p className="mt-2 text-white">
           Sortiert nach aktuellem Punktekonto. Ausstehende Tipps werden nicht zusätzlich gezählt.
         </p>
+        {isHiddenFromLeaderboard ? (
+          <p className="mt-2 rounded-md border border-amber-300/60 bg-amber-500/20 px-3 py-2 text-sm text-amber-50">
+            Dein Konto ist für die Rangliste ausgeblendet. Du siehst die Liste der anderen, erscheinst aber selbst
+            nicht darin.
+          </p>
+        ) : null}
 
         <section className="mt-4 rounded-xl border bg-white p-3 text-zinc-900 shadow-sm">
           {ranking.length === 0 ? (

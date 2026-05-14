@@ -22,6 +22,13 @@ import { payoutFromGrossReturn } from "@/lib/bet-payout";
 import { profiBetConflictsOpenSet } from "@/lib/betting-conflicts";
 import { MIN_BETTABLE_ODDS, oddsViolateMinimumForMarket } from "@/lib/min-bettable-odds";
 import {
+  QUALIFY_OUTCOME_ET_AWAY,
+  QUALIFY_OUTCOME_ET_HOME,
+  QUALIFY_OUTCOME_PEN_AWAY,
+  QUALIFY_OUTCOME_PEN_HOME,
+  qualifyMarketUsesMethodMatrix,
+} from "@/lib/to-qualify-method";
+import {
   EXACT_SCORE_AWAY_WINS,
   EXACT_SCORE_CATCH_ALL_LABEL,
   EXACT_SCORE_DRAWS,
@@ -29,7 +36,7 @@ import {
   EXACT_SCORE_ORDERED_OUTCOMES,
   sortExactScoreMarketOptions,
 } from "@/lib/exact-score";
-import { formatOneXTwoDisplayLabel } from "@/lib/one-x-two-display";
+import { formatHalfTimeFullTimeDisplayLabel, formatOneXTwoDisplayLabel } from "@/lib/one-x-two-display";
 import { profiMarketCategoryKey } from "@/lib/profi-market-category";
 
 const LEAGUE_MATCH_BET_BUDGET = 100;
@@ -847,17 +854,119 @@ export function BetsBoard({
                   ) : null}
 
                   {qualifyMarkets.length > 0 ? (
-                    <section className="rounded-md border bg-white p-3">
-                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        Qualifiziert sich
-                        <InfoTooltip text={"Wer kommt in die nächste Runde?\n\nBEISPIEL\nMarkt: Qualifiziert sich\nAuswahl: Heimteam (1)\n\nWenn es nach der regulären Spielzeit unentschieden steht, zählt auch Verlängerung und Elfmeterschießen. Die Wette gewinnt, wenn deine ausgewählte Mannschaft am Ende weiterkommt."} />
-                      </h3>
-                      <p className="mt-1 text-xs text-zinc-600">
-                        Wer zieht in die nächste Runde ein?
-                      </p>
-                      <div className="mt-3 space-y-3">
-                        {qualifyMarkets.map((market) => (
-                          <div key={market.id} className="rounded-md border bg-white p-3">
+                    <div className="space-y-3">
+                      {qualifyMarkets.map((market) => {
+                        const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
+                        const isMethodMatrix = qualifyMarketUsesMethodMatrix(market.options);
+
+                        const renderPick = (rowKey: string, option: Option | undefined) => {
+                          if (!option) {
+                            return (
+                              <td key={`missing-${rowKey}`} className="px-1 py-1">
+                                <span className="text-zinc-400">–</span>
+                              </td>
+                            );
+                          }
+                          const isSelected = selections.some((item) => item.optionId === option.id);
+                          const pickBlocked =
+                            isProfiOptionBlocked(match.id, market.type, option.outcome) ||
+                            isProfiCategoryAlreadyUsed(match.id, market.type) ||
+                            profiBudgetEmpty;
+                          return (
+                            <td key={option.id} className="px-1 py-1 align-top">
+                              <button
+                                type="button"
+                                disabled={
+                                  !isAuthenticated ||
+                                  oddsViolateMinimumForMarket(market.type, option.odds) ||
+                                  (pickBlocked && !isSelected)
+                                }
+                                onClick={() =>
+                                  toggleSelection({
+                                    matchId: match.id,
+                                    matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                    marketTitle: market.title,
+                                    marketType: market.type,
+                                    optionId: option.id,
+                                    outcome: option.outcome,
+                                    odds: option.odds,
+                                  })
+                                }
+                                className={`w-full min-h-[3rem] rounded-md border px-2 py-1.5 text-left ${
+                                  isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
+                                } ${
+                                  isAuthenticated &&
+                                  !oddsViolateMinimumForMarket(market.type, option.odds) &&
+                                  (!pickBlocked || isSelected)
+                                    ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
+                                    : "cursor-not-allowed opacity-70"
+                                }`}
+                              >
+                                <p className="text-lg font-semibold leading-tight text-blue-700">
+                                  {option.odds.toFixed(2)}
+                                </p>
+                              </button>
+                            </td>
+                          );
+                        };
+
+                        if (isMethodMatrix) {
+                          return (
+                            <section key={market.id} className="rounded-md border bg-white p-3">
+                              <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                                Methode des Sieges
+                                <InfoTooltip
+                                  text={
+                                    "Auf welche Weise gewinnt die gewählte Mannschaft die Partie?\n\nDie Zeilen „In Verlängerung“ und „Nach Elfmeterschießen“ beziehen sich nur auf den jeweiligen Weg – bei einem Sieg in der regulären Spielzeit gewinnen diese vier Tipps nicht (Auswertung: Reguläre Spielzeit)."
+                                  }
+                                />
+                              </h3>
+                              <p className="mt-1 text-xs text-zinc-600">
+                                Spalten: Heim- und Auswärtsmannschaft. Zeilen: Entscheidung in der Verlängerung oder erst
+                                im Elfmeterschießen.
+                              </p>
+                              <div className="mt-3 overflow-x-auto rounded-md border border-zinc-200 bg-white">
+                                <table className="w-full min-w-[22rem] border-collapse text-sm">
+                                  <thead>
+                                    <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
+                                      <th className="px-2 py-2 font-semibold text-black"> </th>
+                                      <th className="px-2 py-2 font-semibold text-black">{match.homeTeam}</th>
+                                      <th className="px-2 py-2 font-semibold text-black">{match.awayTeam}</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    <tr className="border-b border-zinc-100">
+                                      <th className="px-2 py-2 text-left font-medium text-zinc-800">
+                                        In Verlängerung
+                                      </th>
+                                      {renderPick("et-home", byOutcome.get(QUALIFY_OUTCOME_ET_HOME))}
+                                      {renderPick("et-away", byOutcome.get(QUALIFY_OUTCOME_ET_AWAY))}
+                                    </tr>
+                                    <tr className="border-b border-zinc-100">
+                                      <th className="px-2 py-2 text-left font-medium text-zinc-800">
+                                        Nach Elfmeterschießen
+                                      </th>
+                                      {renderPick("pen-home", byOutcome.get(QUALIFY_OUTCOME_PEN_HOME))}
+                                      {renderPick("pen-away", byOutcome.get(QUALIFY_OUTCOME_PEN_AWAY))}
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </section>
+                          );
+                        }
+
+                        return (
+                          <section key={market.id} className="rounded-md border bg-white p-3">
+                            <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
+                              Qualifiziert sich
+                              <InfoTooltip
+                                text={
+                                  "Wer kommt in die nächste Runde?\n\nBEISPIEL\nMarkt: Qualifiziert sich\nAuswahl: Heimteam (1)\n\nWenn es nach der regulären Spielzeit unentschieden steht, zählt auch Verlängerung und Elfmeterschießen. Die Wette gewinnt, wenn deine ausgewählte Mannschaft am Ende weiterkommt."
+                                }
+                              />
+                            </h3>
+                            <p className="mt-1 text-xs text-zinc-600">Wer zieht in die nächste Runde ein?</p>
                             <div className="mt-2 grid gap-2 md:grid-cols-2">
                               {market.options.map((option) => {
                                 const isSelected = selections.some((item) => item.optionId === option.id);
@@ -907,10 +1016,10 @@ export function BetsBoard({
                                 );
                               })}
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
+                          </section>
+                        );
+                      })}
+                    </div>
                   ) : null}
 
                   {bttsMarkets.length > 0 ? (
@@ -1023,7 +1132,13 @@ export function BetsBoard({
                                         : "cursor-not-allowed opacity-70"
                                     }`}
                                   >
-                                    <p className="text-sm text-zinc-700">{option.outcome}</p>
+                                    <p className="text-sm text-zinc-700">
+                                      {formatHalfTimeFullTimeDisplayLabel(
+                                        option.outcome,
+                                        match.homeTeam,
+                                        match.awayTeam,
+                                      )}
+                                    </p>
                                     <p className="text-lg font-semibold text-blue-700">{option.odds.toFixed(2)}</p>
                                   </button>
                                 );
@@ -1538,18 +1653,13 @@ export function BetsBoard({
                         Exact Score
                         <InfoTooltip text={"Was wird der genaue Endstand nach Ende der regulären Spielzeit sein?"} />
                       </h3>
-                      <p className="mt-1 text-xs text-zinc-600">
-                        <strong>X:X</strong> ist die Sammelquote für Endstände, die nicht als eigene Zeile angeboten
-                        werden.
-                      </p>
                       <div className="mt-3 space-y-3">
                         {exactScoreMarkets.map((market) => {
                           const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
-                          const standardSet = new Set<string>([
-                            ...EXACT_SCORE_ORDERED_OUTCOMES,
-                            EXACT_SCORE_CATCH_ALL_LABEL,
-                          ]);
-                          const legacyOptions = market.options.filter((o) => !standardSet.has(o.outcome));
+                          const standardSet = new Set<string>(EXACT_SCORE_ORDERED_OUTCOMES);
+                          const legacyOptions = market.options.filter(
+                            (o) => !standardSet.has(o.outcome) && o.outcome !== EXACT_SCORE_CATCH_ALL_LABEL,
+                          );
 
                           const renderOdd = (option: Option | undefined) => {
                             if (!option) {
@@ -1595,8 +1705,6 @@ export function BetsBoard({
                             );
                           };
 
-                          const catchAll = byOutcome.get(EXACT_SCORE_CATCH_ALL_LABEL);
-
                           return (
                             <div key={market.id} className="rounded-md border bg-white p-3">
                               <p className="text-sm font-medium text-black">{market.title}</p>
@@ -1632,14 +1740,6 @@ export function BetsBoard({
                                   </div>
                                 </div>
                               </div>
-                              {catchAll ? (
-                                <div className="mt-4 border-t border-zinc-100 pt-3">
-                                  <p className="text-xs font-medium text-zinc-600">
-                                    Sammelquote (nicht gelistete Endstände)
-                                  </p>
-                                  <div className="mt-2 max-w-sm">{renderOdd(catchAll)}</div>
-                                </div>
-                              ) : null}
                               {legacyOptions.length > 0 ? (
                                 <div className="mt-4 border-t border-zinc-100 pt-3">
                                   <p className="mb-2 text-xs font-medium text-zinc-600">

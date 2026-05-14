@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { adminCreateMatchSchema } from "@/lib/validation";
-import { EXACT_SCORE_CATCH_ALL_LABEL, EXACT_SCORE_ORDERED_OUTCOMES } from "@/lib/exact-score";
+import { EXACT_SCORE_ORDERED_OUTCOMES } from "@/lib/exact-score";
 import { inferWorldCupGroupCode } from "@/lib/world-cup-groups";
 
 export async function POST(request: Request) {
@@ -104,12 +104,10 @@ export async function POST(request: Request) {
       "Exact Score",
       (() => {
         const es = odds.exactScore as Record<string, number>;
-        const rows: Array<{ outcome: string; odds: number }> = EXACT_SCORE_ORDERED_OUTCOMES.map((outcome) => ({
+        return EXACT_SCORE_ORDERED_OUTCOMES.map((outcome) => ({
           outcome,
           odds: es[outcome],
         }));
-        rows.push({ outcome: EXACT_SCORE_CATCH_ALL_LABEL, odds: es.catchAll });
-        return rows;
       })(),
     );
 
@@ -185,9 +183,11 @@ export async function POST(request: Request) {
     await createMarket("CORNERS_MATRIX" as MarketType, "Hjornespark", cornerOptions);
 
     if (isKnockout && odds.toQualify) {
-      await createMarket(MarketType.TO_QUALIFY, "Qualifiziert sich", [
-        { outcome: "1", odds: odds.toQualify.home },
-        { outcome: "2", odds: odds.toQualify.away },
+      await createMarket(MarketType.TO_QUALIFY, "Methode des Sieges", [
+        { outcome: "QUALIFY:ET:1", odds: odds.toQualify.homeEt },
+        { outcome: "QUALIFY:ET:2", odds: odds.toQualify.awayEt },
+        { outcome: "QUALIFY:PEN:1", odds: odds.toQualify.homePen },
+        { outcome: "QUALIFY:PEN:2", odds: odds.toQualify.awayPen },
       ]);
     }
 

@@ -71,6 +71,30 @@ describe("profiBetsMutuallyAbsorbing", () => {
     ).toBe(false);
   });
 
+  it("sperrt zwei verschiedene KO-Methode-Tipps (z. B. Verlängerung Heim vs. Elfmeter Gast)", () => {
+    expect(
+      profiBetsMutuallyAbsorbing(
+        { marketType: "TO_QUALIFY", outcomeLabel: "QUALIFY:ET:1" },
+        { marketType: "TO_QUALIFY", outcomeLabel: "QUALIFY:PEN:2" },
+      ),
+    ).toBe(true);
+  });
+
+  it("sperrt 1X2 Heimsieg und Handicap 0:1 mit Gewinn Auswärts (volle H/D/A-Abdeckung)", () => {
+    expect(
+      profiBetsMutuallyAbsorbing(
+        { marketType: "ONE_X_TWO", outcomeLabel: "1" },
+        { marketType: "HANDICAP_MATRIX", outcomeLabel: "HANDICAP:0:1:2" },
+      ),
+    ).toBe(true);
+    expect(
+      profiBetsMutuallyAbsorbing(
+        { marketType: "HANDICAP_MATRIX", outcomeLabel: "HANDICAP:0:1:2" },
+        { marketType: "ONE_X_TWO", outcomeLabel: "1" },
+      ),
+    ).toBe(true);
+  });
+
   it("sperrt nicht Karten und Ecken gegeneinander", () => {
     expect(
       profiBetsMutuallyAbsorbing(
@@ -101,5 +125,14 @@ describe("profiBetConflictsOpenSet", () => {
         [{ marketType: "ONE_X_TWO", outcomeLabel: "1" }],
       ),
     ).toBe(false);
+  });
+
+  it("sperrt Handicap-Kandidat, wenn offener 1X2-Tipp mit ihm H/D/A vollständig abdeckt", () => {
+    expect(
+      profiBetConflictsOpenSet(
+        { marketType: "HANDICAP_MATRIX", outcomeLabel: "HANDICAP:0:1:2" },
+        [{ marketType: "ONE_X_TWO", outcomeLabel: "1" }],
+      ),
+    ).toBe(true);
   });
 });

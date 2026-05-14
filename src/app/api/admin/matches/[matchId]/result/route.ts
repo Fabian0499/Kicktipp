@@ -8,6 +8,12 @@ import { goalsMatrixOutcomeWins } from "@/lib/goals-market";
 import { handicapMatrixOutcomeWins } from "@/lib/handicap-market";
 import { winningExactScoreOutcomes } from "@/lib/exact-score";
 import { payoutFromGrossReturn } from "@/lib/bet-payout";
+import {
+  isQualifyMethodOutcome,
+  qualifyMarketUsesMethodMatrix,
+  winningQualifyMethodOutcomes,
+  type KnockoutDecidedBy,
+} from "@/lib/to-qualify-method";
 import { settleMatchSchema } from "@/lib/validation";
 
 const LEAGUE_MAX_PAYOUT_PER_BET = 400;
@@ -78,12 +84,6 @@ function getWinningOutcomeLabels(
     return ["1X", "X2"];
   }
 
-  if (marketType === MarketType.TO_QUALIFY) {
-    if (homeScore > awayScore) return ["1"];
-    if (homeScore < awayScore) return ["2"];
-    return [];
-  }
-
   return [];
 }
 
@@ -104,9 +104,29 @@ export async function POST(request: Request, context: { params: Promise<{ matchI
       return NextResponse.json({ error: "Ungültiges Ergebnis." }, { status: 400 });
     }
 
-    const { homeHalfTimeScore, awayHalfTimeScore, homeScore, awayScore, totalCards, totalCorners } =
-      parsed.data;
-    const match = await db.match.findUnique({ where: { id: matchId } });
+    const {
+      homeHalfTimeScore,
+      awayHalfTimeScore,
+      homeScore,
+      awayScore,
+      totalCards,
+      totalCorners,
+      knockoutDecidedBy,
+      knockoutAdvancingIsHome,
+    } = parsed.data;
+    const match = await db.match.findUnique({
+      where: { id: matchId },
+      include: {
+        markets: {
+          where: { type: MarketType.TO_QUALIFY },
+          include: {
+            options: {
+              select: { outcome: true },
+            },
+          },
+        },
+      },
+    });
     if (!match) {
       return NextResponse.json({ error: "Spiel nicht gefunden." }, { status: 404 });
     }
@@ -114,6 +134,57 @@ export async function POST(request: Request, context: { params: Promise<{ matchI
     if ((match as unknown as { settledAt?: Date | null }).settledAt) {
       return NextResponse.json({ error: "Spiel wurde bereits ausgewertet." }, { status: 400 });
     }
+
+    const qualifyOptions = match.markets[0]?.options ?? [];
+    const usesQualifyMethodMatrix = qualifyMarketUsesMethodMatrix(qualifyOptions);
+
+    if (match.isKnockout && usesQualifyMethodMatrix) {
+      if (!knockoutDecidedBy) {
+        return NextResponse.json(
+          {
+            error:
+              "Bei diesem K.-o.-Spiel ist die Auswahl zur Entscheidung (Regulärzeit / Verlängerung / Elfmeterschießen) erforderlich.",
+          },
+          { status: 400 },
+        );
+      }
+      if (knockoutDecidedBy === "REGULATION" && homeScore === awayScore) {
+        return NextResponse.json(
+          { error: "Bei Unentschieden kann die Entscheidung nicht „Reguläre Spielzeit“ sein." },
+          { status: 400 },
+        );
+      }
+      if (knockoutDecidedBy === "EXTRA_TIME" && homeScore === awayScore) {
+        return NextResponse.json(
+          { error: "Bei Unentschieden im Endstand kann die Entscheidung nicht „Verlängerung“ sein." },
+          { status: 400 },
+        );
+      }
+      if (knockoutDecidedBy === "PENALTIES") {
+        if (homeScore !== awayScore) {
+          return NextResponse.json(
+            { error: "Elfmeterschießen ist nur bei unentschiedenem Endstand wählbar." },
+            { status: 400 },
+          );
+        }
+        if (knockoutAdvancingIsHome === undefined) {
+          return NextResponse.json(
+            { error: "Bitte angeben, welche Mannschaft nach dem Elfmeterschießen weiterkommt." },
+            { status: 400 },
+          );
+        }
+      }
+    }
+
+    const qualifyMethodWinners: string[] =
+      match.isKnockout && usesQualifyMethodMatrix && knockoutDecidedBy
+        ? winningQualifyMethodOutcomes(
+            knockoutDecidedBy as KnockoutDecidedBy,
+            homeScore,
+            awayScore,
+            knockoutAdvancingIsHome,
+          )
+        : [];
 
     const openBets = await db.bet.findMany({
       where: {
@@ -141,10 +212,33 @@ export async function POST(request: Request, context: { params: Promise<{ matchI
       const creditedByUser = new Map<string, number>();
 
       for (const bet of openBets) {
-        const isQualifyVoid =
-          bet.marketType === MarketType.TO_QUALIFY && homeScore === awayScore;
+        let isQualifyVoid = false;
         let won: boolean;
-        if ((bet.marketType as string) === "CARDS_MATRIX") {
+        if (bet.marketType === MarketType.TO_QUALIFY) {
+          const legacyOutcome = bet.outcomeLabel === "1" || bet.outcomeLabel === "2";
+          const methodOutcome = isQualifyMethodOutcome(bet.outcomeLabel);
+          if (usesQualifyMethodMatrix) {
+            isQualifyVoid =
+              (legacyOutcome && homeScore === awayScore) ||
+              (methodOutcome && knockoutDecidedBy === "REGULATION");
+            if (legacyOutcome) {
+              won =
+                !isQualifyVoid &&
+                ((homeScore > awayScore && bet.outcomeLabel === "1") ||
+                  (homeScore < awayScore && bet.outcomeLabel === "2"));
+            } else if (methodOutcome) {
+              won = !isQualifyVoid && qualifyMethodWinners.includes(bet.outcomeLabel);
+            } else {
+              won = false;
+            }
+          } else {
+            isQualifyVoid = homeScore === awayScore;
+            won =
+              !isQualifyVoid &&
+              ((homeScore > awayScore && bet.outcomeLabel === "1") ||
+                (homeScore < awayScore && bet.outcomeLabel === "2"));
+          }
+        } else if ((bet.marketType as string) === "CARDS_MATRIX") {
           won = cardsMatrixOutcomeWins(bet.outcomeLabel, totalCards);
         } else if ((bet.marketType as string) === "CORNERS_MATRIX") {
           won = cornersMatrixOutcomeWins(bet.outcomeLabel, totalCorners);
@@ -160,7 +254,7 @@ export async function POST(request: Request, context: { params: Promise<{ matchI
             homeScore,
             awayScore,
           );
-          won = !isQualifyVoid && winners.includes(bet.outcomeLabel);
+          won = winners.includes(bet.outcomeLabel);
         }
 
         await (tx as unknown as { bet: { update: (args: unknown) => Promise<unknown> } }).bet.update({
