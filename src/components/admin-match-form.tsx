@@ -27,7 +27,8 @@ export function AdminMatchForm() {
   const [cardsRowCount, setCardsRowCount] = useState(9);
   const [cornersRowStart, setCornersRowStart] = useState(0);
   const [cornersRowCount, setCornersRowCount] = useState(9);
-  const [handicapRowCount, setHandicapRowCount] = useState(5);
+  const [handicapHomeRowCount, setHandicapHomeRowCount] = useState(5);
+  const [handicapAwayRowCount, setHandicapAwayRowCount] = useState(5);
   const [homeTeam, setHomeTeam] = useState("Deutschland");
   const [awayTeam, setAwayTeam] = useState("Ukraine");
   const inferredGroupCode = inferWorldCupGroupCode(homeTeam, awayTeam);
@@ -93,18 +94,20 @@ export function AdminMatchForm() {
           yes: Number(formData.get("oddBttsYes")),
           no: Number(formData.get("oddBttsNo")),
         },
-        handicapMatrixRowCount: Number(formData.get("handicapMatrixRowCount")),
+        handicapMatrixHomeRowCount: Number(formData.get("handicapMatrixHomeRowCount")),
+        handicapMatrixAwayRowCount: Number(formData.get("handicapMatrixAwayRowCount")),
         handicapMatrix: (() => {
-          const hCount = Number(formData.get("handicapMatrixRowCount"));
+          const homeCount = Number(formData.get("handicapMatrixHomeRowCount"));
+          const awayCount = Number(formData.get("handicapMatrixAwayRowCount"));
           return [
-            ...Array.from({ length: hCount }, (_, i) => ({
+            ...Array.from({ length: homeCount }, (_, i) => ({
               homeHandicap: i + 1,
               awayHandicap: 0,
               home: Number(formData.get(`oddHandicapHomeH${i}`)),
               draw: Number(formData.get(`oddHandicapHomeX${i}`)),
               away: Number(formData.get(`oddHandicapHomeA${i}`)),
             })),
-            ...Array.from({ length: hCount }, (_, i) => ({
+            ...Array.from({ length: awayCount }, (_, i) => ({
               homeHandicap: 0,
               awayHandicap: i + 1,
               home: Number(formData.get(`oddHandicapAwayH${i}`)),
@@ -187,7 +190,8 @@ export function AdminMatchForm() {
     setCardsRowCount(9);
     setCornersRowStart(0);
     setCornersRowCount(9);
-    setHandicapRowCount(5);
+    setHandicapHomeRowCount(5);
+    setHandicapAwayRowCount(5);
     setMessage("Spiel und Märkte wurden veröffentlicht und sind jetzt im Reiter Tipps sichtbar.");
     setLoading(false);
   }
@@ -532,28 +536,53 @@ export function AdminMatchForm() {
         <fieldset className="rounded-md border p-4 md:col-span-2">
           <legend className="px-2 text-base font-semibold text-zinc-900">Handicap</legend>
           <p className="mb-3 text-xs text-zinc-600">
-            Handicap in beide Richtungen: <strong>1:0</strong>, <strong>2:0</strong> usw. und <strong>0:1</strong>,{" "}
-            <strong>0:2</strong> usw. Pro Zeile je eine Quote für Heim, Unentschieden und Auswärts nach angewendetem
-            Handicap.
+            Vorteil für die Heimmannschaft (<strong>1:0</strong>, <strong>2:0</strong> …) und für die Auswärtsmannschaft
+            (<strong>0:1</strong>, <strong>0:2</strong> …) getrennt einstellbar. Pro Zeile je eine Quote für Heim,
+            Unentschieden und Auswärts nach angewendetem Handicap.
           </p>
-          <div className="mb-4">
-            <label className="block text-xs font-semibold text-zinc-800">Anzahl Zeilen</label>
-            <input
-              name="handicapMatrixRowCount"
-              type="number"
-              min={1}
-              max={15}
-              required
-              value={handicapRowCount}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (Number.isFinite(v)) {
-                  setHandicapRowCount(Math.min(15, Math.max(1, Math.round(v))));
-                }
-              }}
-              className="mt-1 w-24 rounded-md border border-zinc-300 px-2 py-1.5 tabular-nums"
-            />
-            <p className="mt-1 text-[11px] text-zinc-500">1–15 pro Richtung</p>
+          <div className="mb-4 flex flex-wrap gap-6">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-800">
+                Zeilen Heim ({homeTeam || "Heim"})
+              </label>
+              <input
+                name="handicapMatrixHomeRowCount"
+                type="number"
+                min={1}
+                max={15}
+                required
+                value={handicapHomeRowCount}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (Number.isFinite(v)) {
+                    setHandicapHomeRowCount(Math.min(15, Math.max(1, Math.round(v))));
+                  }
+                }}
+                className="mt-1 w-24 rounded-md border border-zinc-300 px-2 py-1.5 tabular-nums"
+              />
+              <p className="mt-1 text-[11px] text-zinc-500">1:0 bis {handicapHomeRowCount}:0</p>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-zinc-800">
+                Zeilen Auswärts ({awayTeam || "Gast"})
+              </label>
+              <input
+                name="handicapMatrixAwayRowCount"
+                type="number"
+                min={1}
+                max={15}
+                required
+                value={handicapAwayRowCount}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (Number.isFinite(v)) {
+                    setHandicapAwayRowCount(Math.min(15, Math.max(1, Math.round(v))));
+                  }
+                }}
+                className="mt-1 w-24 rounded-md border border-zinc-300 px-2 py-1.5 tabular-nums"
+              />
+              <p className="mt-1 text-[11px] text-zinc-500">0:1 bis 0:{handicapAwayRowCount}</p>
+            </div>
           </div>
           <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
             <table className="w-full min-w-[32rem] border-collapse text-sm">
@@ -567,13 +596,13 @@ export function AdminMatchForm() {
               </thead>
               <tbody>
                 {[
-                  ...Array.from({ length: handicapRowCount }, (_, i) => ({
+                  ...Array.from({ length: handicapHomeRowCount }, (_, i) => ({
                     key: `home-${i}`,
                     label: `${i + 1}:0`,
                     fieldPrefix: "Home",
                     index: i,
                   })),
-                  ...Array.from({ length: handicapRowCount }, (_, i) => ({
+                  ...Array.from({ length: handicapAwayRowCount }, (_, i) => ({
                     key: `away-${i}`,
                     label: `0:${i + 1}`,
                     fieldPrefix: "Away",

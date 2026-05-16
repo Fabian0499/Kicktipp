@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
+import { LocaleProvider } from "@/components/locale-provider";
+import { createServerT, getLocale, getMessages } from "@/lib/i18n/locale";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,24 +16,31 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Kicktipp Plattform",
-  description: "Moderne Tippplattform mit Benutzerkonten und Punktesystem.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieStore = await cookies();
+  const t = createServerT(cookieStore);
+  return {
+    title: t("meta.title"),
+    description: t("meta.description"),
+  };
+}
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const locale = getLocale(cookieStore);
+  const messages = getMessages(locale);
+
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang={locale} className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-zinc-50 text-zinc-900">
-        <SiteHeader />
-        {children}
+        <LocaleProvider locale={locale} messages={messages}>
+          <SiteHeader />
+          {children}
+        </LocaleProvider>
       </body>
     </html>
   );

@@ -37,6 +37,8 @@ import {
   sortExactScoreMarketOptions,
 } from "@/lib/exact-score";
 import { formatHalfTimeFullTimeDisplayLabel, formatOneXTwoDisplayLabel } from "@/lib/one-x-two-display";
+import { useLocale, useT } from "@/components/locale-provider";
+import { displayTeamName } from "@/lib/team-display-names";
 import { profiMarketCategoryKey } from "@/lib/profi-market-category";
 
 const LEAGUE_MATCH_BET_BUDGET = 100;
@@ -145,9 +147,18 @@ function flagIsoForTeam(team: string): string | null {
   return COUNTRY_FLAG_ISO[normalized] ?? null;
 }
 
-function displayOutcomeLabel(marketType: string, outcome: string, homeLabel?: string, awayLabel?: string): string {
+function displayOutcomeLabel(
+  marketType: string,
+  outcome: string,
+  homeLabel?: string,
+  awayLabel?: string,
+  drawLabel = "Unentschieden",
+): string {
   if (marketType === "ONE_X_TWO") {
-    return formatOneXTwoDisplayLabel(outcome, homeLabel ?? "", awayLabel ?? "");
+    return formatOneXTwoDisplayLabel(outcome, homeLabel ?? "", awayLabel ?? "", drawLabel);
+  }
+  if (marketType === "HALF_TIME_FULL_TIME") {
+    return formatHalfTimeFullTimeDisplayLabel(outcome, homeLabel ?? "", awayLabel ?? "", drawLabel);
   }
   if (marketType === "HANDICAP_MATRIX") {
     return formatHandicapMatrixOutcomeLabel(outcome, homeLabel, awayLabel);
@@ -216,6 +227,9 @@ export function BetsBoard({
     useState<Record<string, Array<{ marketType: string; outcomeLabel: string }>>>(openProfiBetsByMatch);
   const [localSimpleTipByMatch, setLocalSimpleTipByMatch] =
     useState<Record<string, string>>(existingSimpleTipByMatch);
+  const { locale } = useLocale();
+  const t = useT();
+  const drawLabel = t("common.draw");
 
   useEffect(() => {
     setLocalOpenProfiBetsByMatch(openProfiBetsByMatch);
@@ -485,7 +499,7 @@ export function BetsBoard({
 
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Einfach-Tipp konnte nicht gespeichert werden.");
+      setError(body?.error ?? t("bets.simpleTipSaveFailed"));
       setSimpleTipInputs((current) => ({
         ...current,
         [matchId]: {
@@ -496,10 +510,10 @@ export function BetsBoard({
       return;
     }
 
-    setMessage("Einfach-Tipp wurde erfolgreich platziert.");
+    setMessage(t("bets.simpleTipSavedMessage"));
     setSimpleSuccessByMatch((current) => ({
       ...current,
-      [matchId]: "Wette wurde erfolgreich platziert",
+      [matchId]: t("bets.simpleTipSuccessBanner"),
     }));
     window.setTimeout(() => {
       setSimpleSuccessByMatch((current) => {
@@ -530,7 +544,7 @@ export function BetsBoard({
     <>
       {matches.length === 0 ? (
         <div className="mt-5 rounded-xl border bg-white p-6 text-zinc-900 shadow-sm">
-          <p>Noch keine Wett-Ereignisse veröffentlicht.</p>
+          <p>{t("bets.noEvents")}</p>
         </div>
       ) : (
         <div className="mt-5 space-y-5">
@@ -540,14 +554,14 @@ export function BetsBoard({
               onClick={() => setVariant("einfach")}
               className={`cursor-pointer rounded px-3 py-1.5 ${variant === "einfach" ? "bg-black text-white" : ""}`}
             >
-              Billo-Variante
+              {t("bets.billoVariant")}
             </button>
             <button
               type="button"
               onClick={() => setVariant("profi")}
               className={`cursor-pointer rounded px-3 py-1.5 ${variant === "profi" ? "bg-black text-white" : ""}`}
             >
-              Profi-Variante
+              {t("bets.profiVariant")}
             </button>
           </div>
           {displayMatches.map((match, index) => {
@@ -587,7 +601,12 @@ export function BetsBoard({
             const profiBudgetEmpty = remainingBudget < 1;
             const previous = index > 0 ? displayMatches[index - 1] : null;
             const showGroupHeader = match.groupCode !== (previous?.groupCode ?? null);
-            const groupHeading = match.groupCode ? `Gruppe ${match.groupCode}` : "Weitere Spiele";
+            const groupHeading = match.groupCode
+              ? `${t("bets.groupPrefix")} ${match.groupCode}`
+              : t("bets.otherGames");
+            const homeTeamLabel = displayTeamName(match.homeTeam, locale);
+            const awayTeamLabel = displayTeamName(match.awayTeam, locale);
+            const matchVsLabel = `${homeTeamLabel} vs. ${awayTeamLabel}`;
 
             const isExpanded = variant === "einfach" || expandedMatchIds.includes(match.id);
 
@@ -633,7 +652,7 @@ export function BetsBoard({
                               decoding="async"
                             />
                           ) : null}
-                          {match.homeTeam}
+                          {homeTeamLabel}
                         </span>
                         <span>vs.</span>
                         <span className="flex items-center gap-2">
@@ -646,29 +665,29 @@ export function BetsBoard({
                               decoding="async"
                             />
                           ) : null}
-                          {match.awayTeam}
+                          {awayTeamLabel}
                         </span>
                       </span>
                     </h2>
                     {variant === "profi" ? (
                       <span className="rounded-md border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-900">
-                        Verfügbare Punkte: {remainingBudget}
+                        {t("bets.availablePoints")}: {remainingBudget}
                       </span>
                     ) : null}
                   </div>
                   {variant === "profi" && localSimpleTipByMatch[match.id] ? (
                     <p className="mt-2 max-w-xl text-left text-xs font-medium leading-snug text-amber-900">
-                      Du hast hier schon einen Ergebnistipp in der Billo-Variante gesetzt (
-                      {localSimpleTipByMatch[match.id]}).
+                      {t("bets.billoTipAlreadySet").replace("{score}", localSimpleTipByMatch[match.id])}
                     </p>
                   ) : null}
                   <p className="mt-1 text-sm text-zinc-600">
-                    Anstoß: {new Date(match.startsAt).toLocaleString("de-DE")}
+                    {t("dashboard.kickoff")}:{" "}
+                    {new Date(match.startsAt).toLocaleString(locale === "en" ? "en-GB" : "de-DE")}
                   </p>
                 </div>
                 {variant === "profi" ? (
                   <span className="text-sm font-medium text-zinc-600">
-                    {expandedMatchIds.includes(match.id) ? "Ausblenden" : "Quoten anzeigen"}
+                    {expandedMatchIds.includes(match.id) ? t("bets.hideOdds") : t("bets.showOdds")}
                   </span>
                 ) : null}
               </div>
@@ -695,7 +714,7 @@ export function BetsBoard({
                                   decoding="async"
                                 />
                               ) : null}
-                              {match.homeTeam}
+                              {homeTeamLabel}
                             </span>
                           </label>
                           <input
@@ -729,7 +748,7 @@ export function BetsBoard({
                                   decoding="async"
                                 />
                               ) : null}
-                              {match.awayTeam}
+                              {awayTeamLabel}
                             </span>
                           </label>
                           <input
@@ -762,16 +781,16 @@ export function BetsBoard({
                           className="cursor-pointer rounded-md bg-black px-3 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {hasSimpleTip
-                            ? "Bereits getippt"
+                            ? t("bets.alreadyTipped")
                             : remainingBudget < simpleTotalStake
-                              ? "Budget verbraucht"
+                              ? t("bets.budgetUsed")
                             : (simpleTipInputs[match.id]?.saving ?? false)
-                              ? "Speichert..."
-                              : "Tipp platzieren"}
+                              ? t("bets.saving")
+                              : t("bets.placeSimpleTip")}
                         </button>
                         {hasSimpleTip ? (
                           <p className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-base font-semibold text-blue-900">
-                            Du hast getippt: {localSimpleTipByMatch[match.id]}
+                            {t("bets.simpleTipPlaced").replace("{score}", localSimpleTipByMatch[match.id])}
                           </p>
                         ) : null}
                         {simpleSuccessByMatch[match.id] ? (
@@ -791,18 +810,12 @@ export function BetsBoard({
                   {combinedOutcomeMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        1X2
-                        <InfoTooltip
-                          text={
-                            "Wie wird der Ausgang des Spiels sein?\n\nSieg der Heimmannschaft, Unentschieden oder Sieg der Auswärtsmannschaft (Anzeige mit Teamnamen)."
-                          }
-                        />
+                        {t("bets.category1x2")}
+                        <InfoTooltip text={t("bets.tooltip1x2")} />
                       </h3>
                       <div className="mt-3 space-y-3">
                         {combinedOutcomeMarkets.map((market) => (
-                          <div key={market.id} className="rounded-md border bg-white p-3">
-                            <p className="text-sm font-medium text-black">{market.title}</p>
-                            <div className="mt-2 grid gap-2 md:grid-cols-3">
+                          <div key={market.id} className="grid gap-2 md:grid-cols-3">
                               {market.options.map((option) => {
                                 const isSelected = selections.some((item) => item.optionId === option.id);
                                 const pickBlocked =
@@ -821,7 +834,7 @@ export function BetsBoard({
                                     onClick={() =>
                                       toggleSelection({
                                         matchId: match.id,
-                                        matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                        matchLabel: matchVsLabel,
                                         marketTitle: market.title,
                                         marketType: market.type,
                                         optionId: option.id,
@@ -840,13 +853,12 @@ export function BetsBoard({
                                     }`}
                                   >
                                     <p className="text-sm text-zinc-700">
-                                      {formatOneXTwoDisplayLabel(option.outcome, match.homeTeam, match.awayTeam)}
+                                      {formatOneXTwoDisplayLabel(option.outcome, homeTeamLabel, awayTeamLabel, drawLabel)}
                                     </p>
                                     <p className="text-lg font-semibold text-blue-700">{option.odds.toFixed(2)}</p>
                                   </button>
                                 );
                               })}
-                            </div>
                           </div>
                         ))}
                       </div>
@@ -884,7 +896,7 @@ export function BetsBoard({
                                 onClick={() =>
                                   toggleSelection({
                                     matchId: match.id,
-                                    matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                    matchLabel: matchVsLabel,
                                     marketTitle: market.title,
                                     marketType: market.type,
                                     optionId: option.id,
@@ -914,37 +926,29 @@ export function BetsBoard({
                           return (
                             <section key={market.id} className="rounded-md border bg-white p-3">
                               <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                                Methode des Sieges
-                                <InfoTooltip
-                                  text={
-                                    "Auf welche Weise gewinnt die gewählte Mannschaft die Partie?\n\nDie Zeilen „In Verlängerung“ und „Nach Elfmeterschießen“ beziehen sich nur auf den jeweiligen Weg – bei einem Sieg in der regulären Spielzeit gewinnen diese vier Tipps nicht (Auswertung: Reguläre Spielzeit)."
-                                  }
-                                />
+                                {t("bets.categoryQualifyMethod")}
+                                <InfoTooltip text={t("bets.tooltipQualifyMethod")} />
                               </h3>
-                              <p className="mt-1 text-xs text-zinc-600">
-                                Spalten: Heim- und Auswärtsmannschaft. Zeilen: Entscheidung in der Verlängerung oder erst
-                                im Elfmeterschießen.
-                              </p>
                               <div className="mt-3 overflow-x-auto rounded-md border border-zinc-200 bg-white">
                                 <table className="w-full min-w-[22rem] border-collapse text-sm">
                                   <thead>
                                     <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
                                       <th className="px-2 py-2 font-semibold text-black"> </th>
-                                      <th className="px-2 py-2 font-semibold text-black">{match.homeTeam}</th>
-                                      <th className="px-2 py-2 font-semibold text-black">{match.awayTeam}</th>
+                                      <th className="px-2 py-2 font-semibold text-black">{homeTeamLabel}</th>
+                                      <th className="px-2 py-2 font-semibold text-black">{awayTeamLabel}</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     <tr className="border-b border-zinc-100">
                                       <th className="px-2 py-2 text-left font-medium text-zinc-800">
-                                        In Verlängerung
+                                        {t("bets.qualifyMethodEt")}
                                       </th>
                                       {renderPick("et-home", byOutcome.get(QUALIFY_OUTCOME_ET_HOME))}
                                       {renderPick("et-away", byOutcome.get(QUALIFY_OUTCOME_ET_AWAY))}
                                     </tr>
                                     <tr className="border-b border-zinc-100">
                                       <th className="px-2 py-2 text-left font-medium text-zinc-800">
-                                        Nach Elfmeterschießen
+                                        {t("bets.qualifyMethodPen")}
                                       </th>
                                       {renderPick("pen-home", byOutcome.get(QUALIFY_OUTCOME_PEN_HOME))}
                                       {renderPick("pen-away", byOutcome.get(QUALIFY_OUTCOME_PEN_AWAY))}
@@ -959,14 +963,10 @@ export function BetsBoard({
                         return (
                           <section key={market.id} className="rounded-md border bg-white p-3">
                             <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                              Qualifiziert sich
-                              <InfoTooltip
-                                text={
-                                  "Wer kommt in die nächste Runde?\n\nBEISPIEL\nMarkt: Qualifiziert sich\nAuswahl: Heimteam (1)\n\nWenn es nach der regulären Spielzeit unentschieden steht, zählt auch Verlängerung und Elfmeterschießen. Die Wette gewinnt, wenn deine ausgewählte Mannschaft am Ende weiterkommt."
-                                }
-                              />
+                              {t("bets.categoryQualify")}
+                              <InfoTooltip text={t("bets.tooltipQualify")} />
                             </h3>
-                            <p className="mt-1 text-xs text-zinc-600">Wer zieht in die nächste Runde ein?</p>
+                            <p className="mt-1 text-xs text-zinc-600">{t("bets.qualifySubtitle")}</p>
                             <div className="mt-2 grid gap-2 md:grid-cols-2">
                               {market.options.map((option) => {
                                 const isSelected = selections.some((item) => item.optionId === option.id);
@@ -976,9 +976,9 @@ export function BetsBoard({
                                   profiBudgetEmpty;
                                 const label =
                                   option.outcome === "1"
-                                    ? `${match.homeTeam} (1)`
+                                    ? `${homeTeamLabel} (1)`
                                     : option.outcome === "2"
-                                      ? `${match.awayTeam} (2)`
+                                      ? `${awayTeamLabel} (2)`
                                       : option.outcome;
                                 return (
                                   <button
@@ -992,7 +992,7 @@ export function BetsBoard({
                                     onClick={() =>
                                       toggleSelection({
                                         matchId: match.id,
-                                        matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                        matchLabel: matchVsLabel,
                                         marketTitle: market.title,
                                         marketType: market.type,
                                         optionId: option.id,
@@ -1025,14 +1025,12 @@ export function BetsBoard({
                   {bttsMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        Beide Teams treffen
-                        <InfoTooltip text={"Entscheide, ob beide Mannschaften ein Tor erzielen oder nicht. Es spielt keine Rolle, wer als Sieger oder Verlierer des Spiels hervorgeht.\n\nBEISPIEL\nMarkt: Treffen beide?\nAuswahl: Ja\n\nIn diesem Beispiel wettest du, dass beide Mannschaften im gesamten Spiel mindestens ein Tor schießen. Um die Wette zu gewinnen, müssen mindestens 2 Tore erzielt werden."} />
+                        {t("bets.categoryBtts")}
+                        <InfoTooltip text={t("bets.tooltipBtts")} />
                       </h3>
                       <div className="mt-3 space-y-3">
                         {bttsMarkets.map((market) => (
-                          <div key={market.id} className="rounded-md border bg-white p-3">
-                            <p className="text-sm font-medium text-black">{market.title}</p>
-                            <div className="mt-2 grid gap-2 md:grid-cols-3">
+                          <div key={market.id} className="grid gap-2 md:grid-cols-3">
                               {market.options.map((option) => {
                                 const isSelected = selections.some((item) => item.optionId === option.id);
                                 const pickBlocked =
@@ -1051,7 +1049,7 @@ export function BetsBoard({
                                     onClick={() =>
                                       toggleSelection({
                                         matchId: match.id,
-                                        matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                        matchLabel: matchVsLabel,
                                         marketTitle: market.title,
                                         marketType: market.type,
                                         optionId: option.id,
@@ -1069,12 +1067,17 @@ export function BetsBoard({
                                         : "cursor-not-allowed opacity-70"
                                     }`}
                                   >
-                                    <p className="text-sm text-zinc-700">{option.outcome}</p>
+                                    <p className="text-sm text-zinc-700">
+                                      {option.outcome === "Ja"
+                                        ? t("bets.optionJa")
+                                        : option.outcome === "Nein"
+                                          ? t("bets.optionNein")
+                                          : option.outcome}
+                                    </p>
                                     <p className="text-lg font-semibold text-blue-700">{option.odds.toFixed(2)}</p>
                                   </button>
                                 );
                               })}
-                            </div>
                           </div>
                         ))}
                       </div>
@@ -1084,18 +1087,12 @@ export function BetsBoard({
                   {halfTimeFullTimeMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        Halbzeit / Endstand
-                        <InfoTooltip
-                          text={
-                            "Dieser Tipp besteht aus zwei Teilen:\n\n1.\nWelches Team führt zur Halbzeit oder steht es zur Halbzeit unentschieden\n\n2.\nWelches Team hat das Match nach Ende der regulären Spielzeit gewonnen oder endet das Match nach Ende der regulären Spielzeit unentschieden\n\nBeide Teile müssen korrekt sein, damit es Punkte gibt."
-                          }
-                        />
+                        {t("bets.categoryHtFt")}
+                        <InfoTooltip text={t("bets.tooltipHtFt")} />
                       </h3>
                       <div className="mt-3 space-y-3">
                         {halfTimeFullTimeMarkets.map((market) => (
-                          <div key={market.id} className="rounded-md border bg-white p-3">
-                            <p className="text-sm font-medium text-black">{market.title}</p>
-                            <div className="mt-2 grid gap-2 md:grid-cols-3">
+                          <div key={market.id} className="grid gap-2 md:grid-cols-3">
                               {market.options.map((option) => {
                                 const isSelected = selections.some((item) => item.optionId === option.id);
                                 const pickBlocked =
@@ -1114,7 +1111,7 @@ export function BetsBoard({
                                     onClick={() =>
                                       toggleSelection({
                                         matchId: match.id,
-                                        matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                        matchLabel: matchVsLabel,
                                         marketTitle: market.title,
                                         marketType: market.type,
                                         optionId: option.id,
@@ -1135,15 +1132,15 @@ export function BetsBoard({
                                     <p className="text-sm text-zinc-700">
                                       {formatHalfTimeFullTimeDisplayLabel(
                                         option.outcome,
-                                        match.homeTeam,
-                                        match.awayTeam,
+                                        homeTeamLabel,
+                                        awayTeamLabel,
+                                        drawLabel,
                                       )}
                                     </p>
                                     <p className="text-lg font-semibold text-blue-700">{option.odds.toFixed(2)}</p>
                                   </button>
                                 );
                               })}
-                            </div>
                           </div>
                         ))}
                       </div>
@@ -1153,12 +1150,8 @@ export function BetsBoard({
                   {cornersMatrixMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        Hjornespark
-                        <InfoTooltip
-                          text={
-                            "Wie viele Hjornespark (Eckbälle) gab es insgesamt nach Ende der regulären Spielzeit?\n\nDiese Kategorie erscheint bei uns traditionell auf dänisch."
-                          }
-                        />
+                        {t("bets.categoryCorners")}
+                        <InfoTooltip text={t("bets.tooltipCorners")} />
                       </h3>
                       <div className="mt-3 space-y-4">
                         {cornersMatrixMarkets.map((market) => {
@@ -1177,10 +1170,10 @@ export function BetsBoard({
                               <table className="w-full min-w-[28rem] border-collapse text-sm">
                                 <thead>
                                   <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
-                                    <th className="px-2 py-2 font-semibold text-black">Anzahl</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Unter</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Exakt</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Über</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.count")}</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.under")}</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.exact")}</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.over")}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1213,7 +1206,7 @@ export function BetsBoard({
                                               onClick={() =>
                                                 toggleSelection({
                                                   matchId: match.id,
-                                                  matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                                  matchLabel: matchVsLabel,
                                                   marketTitle: market.title,
                                                   marketType: market.type,
                                                   optionId: option.id,
@@ -1253,12 +1246,8 @@ export function BetsBoard({
                   {cardsMatrixMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        Kort
-                        <InfoTooltip
-                          text={
-                            "Wie viele Karten gab es insgesamt nach Ende der regulären Spielzeit? Auch diese Kategorie gibt's auf dänisch.\n\nBei Wetten auf Karten muss man Folgendes wissen:\n\nEine gelbe Karte zählt als eine Karte; eine rote Karte zählt als zwei Karten. Ein Spieler kann maximal drei Karten bekommen.\n\nSehr, sehr wichtig: Karten, die anderen Akteuren als den Spielern (z. B. Trainer, Ersatzspieler oder ausgewechselte Spieler) gezeigt werden, zählen nicht."
-                          }
-                        />
+                        {t("bets.categoryCards")}
+                        <InfoTooltip text={t("bets.tooltipCards")} />
                       </h3>
                       <div className="mt-3 space-y-4">
                         {cardsMatrixMarkets.map((market) => {
@@ -1277,10 +1266,10 @@ export function BetsBoard({
                               <table className="w-full min-w-[28rem] border-collapse text-sm">
                                 <thead>
                                   <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
-                                    <th className="px-2 py-2 font-semibold text-black">Anzahl</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Unter</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Exakt</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Über</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.count")}</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.under")}</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.exact")}</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.over")}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1313,7 +1302,7 @@ export function BetsBoard({
                                               onClick={() =>
                                                 toggleSelection({
                                                   matchId: match.id,
-                                                  matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                                  matchLabel: matchVsLabel,
                                                   marketTitle: market.title,
                                                   marketType: market.type,
                                                   optionId: option.id,
@@ -1372,7 +1361,7 @@ export function BetsBoard({
                               onClick={() =>
                                 toggleSelection({
                                   matchId: match.id,
-                                  matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                  matchLabel: matchVsLabel,
                                   marketTitle: market.title,
                                   marketType: market.type,
                                   optionId: option.id,
@@ -1403,8 +1392,8 @@ export function BetsBoard({
                   {goalsMatrixMarkets.length > 0 || goalMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        Über / Unter Tore
-                        <InfoTooltip text={"Wähle, ob die Gesamtzahl der von beiden Mannschaften erzielten Tore unter, exakt oder über einer bestimmten Anzahl liegen wird. Der Gewinner und der Verlierer des Spiels spielen keine Rolle.\n\nBEISPIEL\nMarkt: Über/Unter Tore\nAuswahl: Über 1 Tor\n\nIn diesem Beispiel wettest du, dass im Spiel mehr als 1 Tor fällt. Dies bedeutet, dass mindestens 2 Tore geschossen werden müssen."} />
+                        {t("bets.categoryGoals")}
+                        <InfoTooltip text={t("bets.tooltipGoals")} />
                       </h3>
                       <div className="mt-3 space-y-4">
                         {goalsMatrixMarkets.map((market) => {
@@ -1423,10 +1412,10 @@ export function BetsBoard({
                               <table className="w-full min-w-[28rem] border-collapse text-sm">
                                 <thead>
                                   <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
-                                    <th className="px-2 py-2 font-semibold text-black">Tore</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Unter</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Exakt</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Über</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.goals")}</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.under")}</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.exact")}</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.over")}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1459,7 +1448,7 @@ export function BetsBoard({
                                               onClick={() =>
                                                 toggleSelection({
                                                   matchId: match.id,
-                                                  matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                                  matchLabel: matchVsLabel,
                                                   marketTitle: market.title,
                                                   marketType: market.type,
                                                   optionId: option.id,
@@ -1514,7 +1503,7 @@ export function BetsBoard({
                                     onClick={() =>
                                       toggleSelection({
                                         matchId: match.id,
-                                        matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                        matchLabel: matchVsLabel,
                                         marketTitle: market.title,
                                         marketType: market.type,
                                         optionId: option.id,
@@ -1532,7 +1521,13 @@ export function BetsBoard({
                                         : "cursor-not-allowed opacity-70"
                                     }`}
                                   >
-                                    <p className="text-sm text-zinc-700">{option.outcome}</p>
+                                    <p className="text-sm text-zinc-700">
+                                      {option.outcome === "Ja"
+                                        ? t("bets.optionJa")
+                                        : option.outcome === "Nein"
+                                          ? t("bets.optionNein")
+                                          : option.outcome}
+                                    </p>
                                     <p className="text-lg font-semibold text-blue-700">{option.odds.toFixed(2)}</p>
                                   </button>
                                 );
@@ -1547,12 +1542,8 @@ export function BetsBoard({
                   {handicapMatrixMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        Handicap
-                        <InfoTooltip
-                          text={
-                            "Bei dieser Tippart bekommt ein Team einen fiktiven Vorsprung von einem oder mehreren Toren:\n\nHandicap (2:0) bedeutet, dass Team 1 einen Vorsprung von zwei Toren bekommt,\n\nHandicap (0:1) bedeutet, dass Team 2 einen Vorsprung von einem Tor bekommt\n\nund so weiter.\n\nGetippt wird dann, ob das tatsächliche Ergebnis nach Ende der regulären Spielzeit zusammen mit den fiktiven Toren aus dem Handicap zu einem Sieg von Team 1, zu einem Unentschieden oder zu einem Sieg von Team 2 führt.\n\nWer weiterhin Schwierigkeiten mit dieser Kategorie hat, kann sich gerne an die Admins wenden."
-                          }
-                        />
+                        {t("bets.categoryHandicap")}
+                        <InfoTooltip text={t("bets.tooltipHandicap")} />
                       </h3>
                       <div className="mt-3 space-y-4">
                         {handicapMatrixMarkets.map((market) => {
@@ -1563,10 +1554,14 @@ export function BetsBoard({
                               <table className="w-full min-w-[28rem] border-collapse text-sm">
                                 <thead>
                                   <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
-                                    <th className="px-2 py-2 font-semibold text-black">Handicap</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Heim ({match.homeTeam})</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Unentschieden</th>
-                                    <th className="px-2 py-2 font-semibold text-black">Auswärts ({match.awayTeam})</th>
+                                    <th className="px-2 py-2 font-semibold text-black">{t("common.handicap")}</th>
+                                    <th className="px-2 py-2 font-semibold text-black">
+                                      {t("common.home")} ({homeTeamLabel})
+                                    </th>
+                                    <th className="px-2 py-2 font-semibold text-black">{drawLabel}</th>
+                                    <th className="px-2 py-2 font-semibold text-black">
+                                      {t("common.away")} ({awayTeamLabel})
+                                    </th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1606,7 +1601,7 @@ export function BetsBoard({
                                               onClick={() =>
                                                 toggleSelection({
                                                   matchId: match.id,
-                                                  matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                                  matchLabel: matchVsLabel,
                                                   marketTitle: market.title,
                                                   marketType: market.type,
                                                   optionId: option.id,
@@ -1616,8 +1611,8 @@ export function BetsBoard({
                                               }
                                               title={formatHandicapMatrixOutcomeLabel(
                                                 option.outcome,
-                                                match.homeTeam,
-                                                match.awayTeam,
+                                                homeTeamLabel,
+                                                awayTeamLabel,
                                               )}
                                               className={`w-full min-h-[3rem] rounded-md border px-2 py-1.5 text-left ${
                                                 isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
@@ -1650,8 +1645,8 @@ export function BetsBoard({
                   {exactScoreMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
                       <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        Exact Score
-                        <InfoTooltip text={"Was wird der genaue Endstand nach Ende der regulären Spielzeit sein?"} />
+                        {t("bets.categoryExactScore")}
+                        <InfoTooltip text={t("bets.tooltipExactScore")} />
                       </h3>
                       <div className="mt-3 space-y-3">
                         {exactScoreMarkets.map((market) => {
@@ -1681,7 +1676,7 @@ export function BetsBoard({
                                 onClick={() =>
                                   toggleSelection({
                                     matchId: match.id,
-                                    matchLabel: `${match.homeTeam} vs. ${match.awayTeam}`,
+                                    matchLabel: matchVsLabel,
                                     marketTitle: market.title,
                                     marketType: market.type,
                                     optionId: option.id,
@@ -1706,12 +1701,11 @@ export function BetsBoard({
                           };
 
                           return (
-                            <div key={market.id} className="rounded-md border bg-white p-3">
-                              <p className="text-sm font-medium text-black">{market.title}</p>
-                              <div className="mt-3 grid gap-4 md:grid-cols-3">
+                            <div key={market.id}>
+                              <div className="grid gap-4 md:grid-cols-3">
                                 <div>
                                   <p className="border-b border-zinc-200 pb-2 text-center text-sm font-semibold text-black">
-                                    {match.homeTeam}
+                                    {homeTeamLabel}
                                   </p>
                                   <div className="mt-2 space-y-2">
                                     {EXACT_SCORE_HOME_WINS.map((outcome) => (
@@ -1721,7 +1715,7 @@ export function BetsBoard({
                                 </div>
                                 <div>
                                   <p className="border-b border-zinc-200 pb-2 text-center text-sm font-semibold text-black">
-                                    Unentschieden
+                                    {drawLabel}
                                   </p>
                                   <div className="mt-2 space-y-2">
                                     {EXACT_SCORE_DRAWS.map((outcome) => (
@@ -1731,7 +1725,7 @@ export function BetsBoard({
                                 </div>
                                 <div>
                                   <p className="border-b border-zinc-200 pb-2 text-center text-sm font-semibold text-black">
-                                    {match.awayTeam}
+                                    {awayTeamLabel}
                                   </p>
                                   <div className="mt-2 space-y-2">
                                     {EXACT_SCORE_AWAY_WINS.map((outcome) => (
@@ -1743,7 +1737,7 @@ export function BetsBoard({
                               {legacyOptions.length > 0 ? (
                                 <div className="mt-4 border-t border-zinc-100 pt-3">
                                   <p className="mb-2 text-xs font-medium text-zinc-600">
-                                    Weitere angebotene Ergebnisse
+                                    {t("bets.exactScoreMore")}
                                   </p>
                                   <div className="grid gap-2 sm:grid-cols-4">
                                     {sortExactScoreMarketOptions(legacyOptions).map((option) => (
@@ -1771,7 +1765,7 @@ export function BetsBoard({
 
       {!isAuthenticated ? (
         <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-          Zum Platzieren einer Wette bitte zuerst einloggen.
+          {t("bets.loginRequired")}
         </p>
       ) : null}
       <button
@@ -1779,7 +1773,7 @@ export function BetsBoard({
         onClick={() => setIsSlipOpen((current) => !current)}
         className="fixed bottom-4 right-4 z-40 cursor-pointer rounded-full bg-black px-4 py-2 text-sm font-semibold text-white shadow-lg"
       >
-        Wettschein ({selections.length})
+        {t("bets.betSlip")} ({selections.length})
       </button>
 
       <aside
@@ -1788,18 +1782,18 @@ export function BetsBoard({
         }`}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold">Wettschein</h3>
+          <h3 className="text-xl font-semibold">{t("bets.betSlip")}</h3>
           <button
             type="button"
             onClick={() => setIsSlipOpen(false)}
             className="cursor-pointer rounded-md border px-2 py-1 text-sm"
           >
-            Schließen
+            {t("bets.close")}
           </button>
         </div>
 
         {selections.length === 0 ? (
-          <p className="mt-4 text-sm text-zinc-600">Keine Auswahl. Klicke auf ein Quotenfeld.</p>
+          <p className="mt-4 text-sm text-zinc-600">{t("bets.slipEmpty")}</p>
         ) : (
           <ul className="mt-4 space-y-2">
             {selections.map((selection) => (
@@ -1811,9 +1805,12 @@ export function BetsBoard({
                     selection.marketType,
                     selection.outcome,
                     ...teamLabelsFromMatchLabel(selection.matchLabel),
+                    drawLabel,
                   )}
                 </p>
-                <p className="text-sm">Quote: {selection.odds.toFixed(2)}</p>
+                <p className="text-sm">
+                  {t("bets.oddsLabel")}: {selection.odds.toFixed(2)}
+                </p>
                 <button
                   type="button"
                   onClick={() =>
@@ -1821,7 +1818,7 @@ export function BetsBoard({
                   }
                   className="mt-2 cursor-pointer text-sm text-red-700 underline"
                 >
-                  Entfernen
+                  {t("bets.remove")}
                 </button>
               </li>
             ))}
@@ -1829,7 +1826,7 @@ export function BetsBoard({
         )}
 
         <form className="mt-5 space-y-3 border-t pt-4" onSubmit={placeBet}>
-          <label className="block text-sm font-medium">Einsatz (Punkte)</label>
+          <label className="block text-sm font-medium">{t("bets.stakeLabel")}</label>
           <input
             type="number"
             min={1}
@@ -1840,21 +1837,24 @@ export function BetsBoard({
             className="w-full rounded-md border border-zinc-300 px-3 py-2"
           />
           <p className="text-sm">
-            Quote: <span className="font-semibold">{combinedOdds.toFixed(2)}</span>
+            {t("bets.oddsLabel")}: <span className="font-semibold">{combinedOdds.toFixed(2)}</span>
           </p>
           <p className="text-sm">
-            Mögliche Auszahlung (Punktekonto): <span className="font-semibold">{possibleWin.toFixed(2)} Punkte</span>
+            {t("bets.possiblePayout")}:{" "}
+            <span className="font-semibold">
+              {possibleWin.toFixed(2)} {t("common.points")}
+            </span>
           </p>
           <p className="text-xs text-zinc-600">
-            Verbleibendes Budget im gewählten Spiel: {remainingBudgetForSelectedMatch} Punkte
+            {t("bets.remainingBudget")}: {remainingBudgetForSelectedMatch} {t("common.points")}
           </p>
           <p className="text-xs text-zinc-600">
-            Maximaler Einsatz für diese Quote (Gewinnlimit pro Tipp): {maxStakeForSelectedBet} Punkte
+            {t("bets.maxStakeHint")}: {maxStakeForSelectedBet} {t("common.points")}
           </p>
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
           {message && placedBetInfo ? (
             <div className="rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              <p className="font-semibold">Folgende Wette wurde erfolgreich platziert:</p>
+              <p className="font-semibold">{t("bets.placeSuccessTitle")}</p>
               <p className="mt-1">
                 {placedBetInfo.matchLabel} - {placedBetInfo.marketTitle}:{" "}
                 {displayOutcomeLabel(
@@ -1865,7 +1865,9 @@ export function BetsBoard({
                 @{" "}
                 {placedBetInfo.odds.toFixed(2)}
               </p>
-              <p>Einsatz: {placedBetInfo.stake} Punkte</p>
+              <p>
+                {t("dashboard.stake")}: {placedBetInfo.stake} {t("common.points")}
+              </p>
             </div>
           ) : null}
           <button
@@ -1873,7 +1875,7 @@ export function BetsBoard({
             disabled={saving || selections.length === 0 || !canSubmitStake}
             className="w-full cursor-pointer rounded-md bg-black px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? "Speichern..." : "Einsatz bestätigen"}
+            {saving ? t("bets.savingBet") : t("bets.confirmStake")}
           </button>
           <section
             className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50/90 px-4 py-3 text-zinc-800"

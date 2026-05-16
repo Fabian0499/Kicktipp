@@ -249,9 +249,13 @@ export function profiBetConflictsOpenSet(
   candidate: BetConflictInput,
   openBets: BetConflictInput[],
 ): boolean {
-  const ftAtomsAllTips = unionFtAtomsFromBets([...openBets, candidate]);
-  if (ftAtomsAllTips.has("H") && ftAtomsAllTips.has("D") && ftAtomsAllTips.has("A")) {
-    return true;
+  // Nur Kombinationen mit bereits offenen Tipps prüfen – ein einzelner Handicap-Tipp kann
+  // rechnerisch viele Endergebnis-Typen abdecken (z. B. 2:0 Heim), ohne Absicherung zu sein.
+  if (openBets.length > 0) {
+    const ftAtomsAllTips = unionFtAtomsFromBets([...openBets, candidate]);
+    if (ftAtomsAllTips.has("H") && ftAtomsAllTips.has("D") && ftAtomsAllTips.has("A")) {
+      return true;
+    }
   }
   return openBets.some((open) => profiBetsMutuallyAbsorbing(candidate, open));
 }

@@ -1,12 +1,17 @@
 /** Anzeige für Profi-UI: 1X2-Optionen als Mannschaftsnamen / „Unentschieden“ (intern weiter 1 / X / 2). */
-export function formatOneXTwoDisplayLabel(outcome: string, homeTeam: string, awayTeam: string): string {
+export function formatOneXTwoDisplayLabel(
+  outcome: string,
+  homeTeam: string,
+  awayTeam: string,
+  drawLabel = "Unentschieden",
+): string {
   const home = homeTeam.trim();
   const away = awayTeam.trim();
   if (outcome === "1") {
     return home || "1";
   }
   if (outcome === "X") {
-    return "Unentschieden";
+    return drawLabel;
   }
   if (outcome === "2") {
     return away || "2";
@@ -19,6 +24,7 @@ export function formatHalfTimeFullTimeDisplayLabel(
   outcome: string,
   homeTeam: string,
   awayTeam: string,
+  drawLabel = "Unentschieden",
 ): string {
   const home = homeTeam.trim();
   const away = awayTeam.trim();
@@ -33,7 +39,7 @@ export function formatHalfTimeFullTimeDisplayLabel(
       return home || "1";
     }
     if (symbol === "X") {
-      return "Unentschieden";
+      return drawLabel;
     }
     if (symbol === "2") {
       return away || "2";

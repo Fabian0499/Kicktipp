@@ -1,11 +1,15 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ProfileAvatarUpload } from "@/components/profile-avatar-upload";
 import { DashboardSections } from "@/components/dashboard-sections";
+import { leaderboardRankFromRows } from "@/lib/leaderboard-rank";
+import { createServerT } from "@/lib/i18n/locale";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
+  const t = createServerT(await cookies());
   if (!user) {
     redirect("/login");
   }
@@ -72,9 +76,22 @@ export default async function DashboardPage() {
       },
     },
   });
-  const openMatchBudget = budgetRows.reduce((sum, row) => sum + Math.max(0, row.allocated - row.spent), 0);
-  const budgetTransactions = transactions.filter((entry) => entry.description.startsWith("Spielbudget"));
   const walletTransactions = transactions.filter((entry) => !entry.description.startsWith("Spielbudget"));
+
+  const leaderboardPlacement = user.hiddenFromLeaderboard
+    ? null
+    : leaderboardRankFromRows(
+        (
+          await db.user.findMany({
+            where: { hiddenFromLeaderboard: false },
+            include: { wallet: true },
+          })
+        ).map((entry) => ({
+          id: entry.id,
+          points: entry.wallet?.balance ?? 0,
+        })),
+        user.id,
+      );
 
   return (
     <main
@@ -85,21 +102,26 @@ export default async function DashboardPage() {
       <div className="relative mx-auto w-full max-w-5xl px-6 py-10">
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white">Dein Dashboard</h1>
-          <p className="text-white">Hallo {user.username ?? user.email}, hier findest du deinen aktuellen Stand.</p>
+          <h1 className="text-3xl font-bold text-white">{t("dashboard.title")}</h1>
+          <p className="text-white">
+            {t("dashboard.greeting").replace("{name}", user.username ?? user.email)}
+          </p>
         </div>
       </div>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2">
         <ProfileAvatarUpload name={user.username ?? user.email} avatarUrl={user.avatarUrl ?? null} />
-        <article className="rounded-xl border bg-white p-5 text-zinc-900 shadow-sm">
-          <h2 className="text-sm font-medium text-zinc-600">Punktekonto (Gewinne)</h2>
-          <p className="mt-2 text-3xl font-semibold">{user.wallet?.balance ?? 0} Punkte</p>
-        </article>
-        <article className="rounded-xl border bg-white p-5 text-zinc-900 shadow-sm">
-          <h2 className="text-sm font-medium text-zinc-600">Spielbudget (ungenutzt)</h2>
-          <p className="mt-2 text-3xl font-semibold">{openMatchBudget} Punkte</p>
-          <p className="mt-1 text-sm text-zinc-500">Nur für aktuell offene Spiele nutzbar.</p>
+        <article className="flex min-h-[9.5rem] flex-col rounded-xl border bg-white p-5 text-zinc-900 shadow-sm">
+          {leaderboardPlacement ? (
+            <p className="text-center text-base font-semibold text-black">
+              {t("dashboard.placement")}: {leaderboardPlacement.rank}
+            </p>
+          ) : null}
+          <div className="flex flex-1 flex-col items-center justify-center text-center">
+            <p className="text-3xl font-semibold">
+              {user.wallet?.balance ?? 0} {t("common.points")}
+            </p>
+          </div>
         </article>
       </section>
 
@@ -136,12 +158,6 @@ export default async function DashboardPage() {
           spent: row.spent,
         }))}
         walletTransactions={walletTransactions.map((entry) => ({
-          id: entry.id,
-          description: entry.description,
-          amount: entry.amount,
-          type: entry.type,
-        }))}
-        budgetTransactions={budgetTransactions.map((entry) => ({
           id: entry.id,
           description: entry.description,
           amount: entry.amount,

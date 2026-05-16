@@ -1,6 +1,8 @@
+import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import Image from "next/image";
 import { getCurrentUser } from "@/lib/auth";
+import { createServerT } from "@/lib/i18n/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +11,7 @@ function leaderboardDisplayLabel(username: string | null, email: string): string
 }
 
 export default async function LeaderboardPage() {
+  const t = createServerT(await cookies());
   const currentUser = await getCurrentUser();
   const users = await db.user.findMany({
     where: { hiddenFromLeaderboard: false },
@@ -40,24 +43,22 @@ export default async function LeaderboardPage() {
       <div className="absolute inset-0 bg-black/45" />
       <div className="relative mx-auto w-full max-w-4xl px-6 py-8">
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-3xl font-bold text-white">Rangliste</h1>
+          <h1 className="text-3xl font-bold text-white">{t("leaderboard.title")}</h1>
           <p className="rounded-md border border-white/40 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white">
-            Derzeitiger Rang: {isHiddenFromLeaderboard ? "—" : (currentUserRank ?? "-")} / {ranking.length}
+            {t("leaderboard.rankLabel")}: {isHiddenFromLeaderboard ? t("leaderboard.rankHidden") : (currentUserRank ?? "-")}{" "}
+            {t("leaderboard.rankOf")} {ranking.length}
           </p>
         </div>
-        <p className="mt-2 text-white">
-          Sortiert nach aktuellem Punktekonto. Ausstehende Tipps werden nicht zusätzlich gezählt.
-        </p>
+        <p className="mt-2 text-white">{t("leaderboard.subtitle")}</p>
         {isHiddenFromLeaderboard ? (
           <p className="mt-2 rounded-md border border-amber-300/60 bg-amber-500/20 px-3 py-2 text-sm text-amber-50">
-            Dein Konto ist für die Rangliste ausgeblendet. Du siehst die Liste der anderen, erscheinst aber selbst
-            nicht darin.
+            {t("leaderboard.hiddenNotice")}
           </p>
         ) : null}
 
         <section className="mt-4 rounded-xl border bg-white p-3 text-zinc-900 shadow-sm">
           {ranking.length === 0 ? (
-            <p className="p-2 text-sm text-zinc-600">Noch keine Benutzer vorhanden.</p>
+            <p className="p-2 text-sm text-zinc-600">{t("leaderboard.empty")}</p>
           ) : (
             <ol className="space-y-2">
               {ranking.map((entry, index) => (
@@ -90,7 +91,7 @@ export default async function LeaderboardPage() {
                     {entry.avatarUrl ? (
                       <Image
                         src={entry.avatarUrl}
-                        alt={`Profilbild von ${entry.displayName}`}
+                        alt={`${t("leaderboard.profileAlt")} ${entry.displayName}`}
                         width={72}
                         height={72}
                         className="h-[72px] w-[72px] shrink-0 rounded-full border object-cover"
@@ -102,7 +103,9 @@ export default async function LeaderboardPage() {
                     )}
                     <span className="min-w-0 break-words text-base font-medium">{entry.displayName}</span>
                   </div>
-                  <span className="shrink-0 text-lg font-semibold">{entry.points} Punkte</span>
+                  <span className="shrink-0 text-lg font-semibold">
+                    {entry.points} {t("common.points")}
+                  </span>
                 </li>
               ))}
             </ol>

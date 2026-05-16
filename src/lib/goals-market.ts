@@ -1,5 +1,7 @@
 /** Erwartetes Format: GOALS:U:n, GOALS:E:n, GOALS:O:n */
 
+import type { Locale } from "@/lib/i18n/types";
+
 const GOALS_MATRIX_N_MAX = 50;
 
 export function goalsMatrixThresholdsFromOutcomes(outcomes: Iterable<string>): number[] {
@@ -36,7 +38,7 @@ export function goalsMatrixOutcomeWins(outcomeLabel: string, totalGoals: number)
   return false;
 }
 
-export function formatGoalsMatrixOutcomeLabel(outcome: string): string {
+export function formatGoalsMatrixOutcomeLabel(outcome: string, locale: Locale = "de"): string {
   const match = outcome.match(/^GOALS:([UEO]):(\d+)$/);
   if (!match) {
     return outcome;
@@ -44,6 +46,19 @@ export function formatGoalsMatrixOutcomeLabel(outcome: string): string {
 
   const kind = match[1];
   const n = match[2];
+  if (locale === "en") {
+    const goalWord = n === "1" ? "goal" : "goals";
+    if (kind === "U") {
+      return `Under ${n} ${goalWord}`;
+    }
+    if (kind === "E") {
+      return `Exactly ${n} ${goalWord}`;
+    }
+    if (kind === "O") {
+      return `Over ${n} ${goalWord}`;
+    }
+    return outcome;
+  }
   if (kind === "U") {
     return `Unter ${n} ${n === "1" ? "Tor" : "Tore"}`;
   }

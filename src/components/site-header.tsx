@@ -3,17 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-
-const links = [
-  { href: "/", label: "Startseite" },
-  { href: "/how-it-works", label: "So funktioniert's" },
-  { href: "/rules", label: "Regelwerk" },
-  { href: "/bets", label: "Tipps" },
-  { href: "/wm-sieger-2026", label: "WM Sieger 2026" },
-  { href: "/leaderboard", label: "Rangliste" },
-  { href: "/dashboard", label: "Dashboard" },
-];
+import { useEffect, useMemo, useState } from "react";
+import { LanguageSelect } from "@/components/language-select";
+import { useT } from "@/components/locale-provider";
 
 type SessionUser = {
   role?: "USER" | "ADMIN";
@@ -22,8 +14,22 @@ type SessionUser = {
 export function SiteHeader() {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useT();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+
+  const links = useMemo(
+    () => [
+      { href: "/", label: t("nav.home") },
+      { href: "/how-it-works", label: t("nav.howItWorks") },
+      { href: "/rules", label: t("nav.rules") },
+      { href: "/bets", label: t("nav.bets") },
+      { href: "/wm-sieger-2026", label: t("nav.wmWinner") },
+      { href: "/leaderboard", label: t("nav.leaderboard") },
+      { href: "/dashboard", label: t("nav.dashboard") },
+    ],
+    [t],
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -65,47 +71,48 @@ export function SiteHeader() {
         <Link href="/" className="block">
           <Image
             src="/kicktipp-logo.png"
-            alt="Kicktipp Logo"
+            alt={t("nav.logoAlt")}
             width={130}
             height={50}
             priority
             className="mix-blend-multiply"
           />
         </Link>
-        <nav className="flex items-center gap-5 text-base">
+        <nav className="flex items-center gap-4 text-base">
           {links
             .filter((link) => !(isAuthenticated && link.href === "/"))
             .map((link) => {
-            const active = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={active ? "font-semibold text-black" : "font-medium text-black hover:text-black"}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
+              const active = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={active ? "font-semibold text-black" : "font-medium text-black hover:text-black"}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           {sessionUser?.role === "ADMIN" ? (
             <Link
               href="/admin"
               className={pathname === "/admin" ? "font-semibold text-black" : "font-medium text-black hover:text-black"}
             >
-              Verwaltung
+              {t("nav.admin")}
             </Link>
           ) : null}
+          <LanguageSelect />
           {isAuthenticated ? (
             <button
               type="button"
               onClick={handleLogout}
               className="cursor-pointer rounded-md border px-3 py-1.5 text-base font-medium text-black hover:text-black"
             >
-              Logout
+              {t("nav.logout")}
             </button>
           ) : (
             <Link href="/login" className="rounded-md border px-3 py-1.5 text-base font-medium text-black hover:text-black">
-              Login
+              {t("nav.login")}
             </Link>
           )}
         </nav>

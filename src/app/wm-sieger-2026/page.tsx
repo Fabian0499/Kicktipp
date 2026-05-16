@@ -1,11 +1,14 @@
+import { cookies } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { WmWinnerBoard } from "@/components/wm-winner-board";
+import { createServerT } from "@/lib/i18n/locale";
 import { WM_WINNER_EVENT_KEY } from "@/lib/wm-winner";
 
 export const dynamic = "force-dynamic";
 
 export default async function WmSieger2026Page() {
+  const t = createServerT(await cookies());
   const currentUser = await getCurrentUser();
 
   const event = await db.wmWinnerEvent.findUnique({
@@ -25,10 +28,10 @@ export default async function WmSieger2026Page() {
       >
         <div className="absolute inset-0 bg-black/45" />
         <div className="relative mx-auto w-full max-w-4xl px-6 py-10 text-white">
-          <h1 className="text-3xl font-bold">WM Sieger 2026</h1>
+          <h1 className="text-3xl font-bold">{t("wm.title")}</h1>
+          <p className="mt-2 text-zinc-100">{t("wm.subtitle")}</p>
           <p className="mt-4 rounded-xl border border-white/20 bg-white/90 p-6 text-zinc-900">
-            Die Wette wird gerade eingerichtet. Bitte später erneut vorbeischauen oder die Datenbank-Migration
-            ausführen.
+            {t("wm.notConfigured")}
           </p>
         </div>
       </main>
@@ -74,14 +77,10 @@ export default async function WmSieger2026Page() {
     >
       <div className="absolute inset-0 bg-black/45" />
       <div className="relative mx-auto w-full max-w-4xl px-6 py-10">
-        <h1 className="text-3xl font-bold text-white">WM Sieger 2026</h1>
-        <p className="mt-2 max-w-2xl text-zinc-100">
-          Wer wird Weltmeister? Wähle eine Mannschaft – inklusive „Piraten“ für Außenseiter-Siege (Restfeld).
-        </p>
+        <h1 className="text-3xl font-bold text-white">{t("wm.title")}</h1>
+        <p className="mt-2 max-w-2xl text-zinc-100">{t("wm.subtitle")}</p>
         <div className="mt-8">
           <WmWinnerBoard
-            initialTitle={event.title}
-            initialClosesAt={event.closesAt.toISOString()}
             initialSettledAt={event.settledAt?.toISOString() ?? null}
             initialAcceptingTips={acceptingTips}
             initialOptions={event.options.map((option) => ({

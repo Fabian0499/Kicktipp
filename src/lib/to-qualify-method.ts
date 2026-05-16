@@ -1,5 +1,7 @@
 /** KO-Markt „Methode des Sieges“: Zeilen Verlängerung / Elfmeter, Spalten Heim / Gast */
 
+import type { Locale } from "@/lib/i18n/types";
+
 export const QUALIFY_OUTCOME_ET_HOME = "QUALIFY:ET:1";
 export const QUALIFY_OUTCOME_ET_AWAY = "QUALIFY:ET:2";
 export const QUALIFY_OUTCOME_PEN_HOME = "QUALIFY:PEN:1";
@@ -60,24 +62,25 @@ export function formatToQualifyOutcomeDisplay(
   outcome: string,
   homeTeam: string,
   awayTeam: string,
+  locale: Locale = "de",
 ): string {
   if (outcome === "1") {
-    return `${homeTeam} qualifiziert sich`;
+    return locale === "en" ? `${homeTeam} to qualify` : `${homeTeam} qualifiziert sich`;
   }
   if (outcome === "2") {
-    return `${awayTeam} qualifiziert sich`;
+    return locale === "en" ? `${awayTeam} to qualify` : `${awayTeam} qualifiziert sich`;
   }
   if (outcome === QUALIFY_OUTCOME_ET_HOME) {
-    return `In Verlängerung – ${homeTeam}`;
+    return locale === "en" ? `After extra time – ${homeTeam}` : `In Verlängerung – ${homeTeam}`;
   }
   if (outcome === QUALIFY_OUTCOME_ET_AWAY) {
-    return `In Verlängerung – ${awayTeam}`;
+    return locale === "en" ? `After extra time – ${awayTeam}` : `In Verlängerung – ${awayTeam}`;
   }
   if (outcome === QUALIFY_OUTCOME_PEN_HOME) {
-    return `Nach Elfmeterschießen – ${homeTeam}`;
+    return locale === "en" ? `After penalties – ${homeTeam}` : `Nach Elfmeterschießen – ${homeTeam}`;
   }
   if (outcome === QUALIFY_OUTCOME_PEN_AWAY) {
-    return `Nach Elfmeterschießen – ${awayTeam}`;
+    return locale === "en" ? `After penalties – ${awayTeam}` : `Nach Elfmeterschießen – ${awayTeam}`;
   }
   return outcome;
 }

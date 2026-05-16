@@ -1,34 +1,18 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { getMessages, getLocale } from "@/lib/i18n/locale";
 
-const sections = [
-  {
-    title: "Regelwerk",
-    href: "/rules",
-    text: "Alles Wichtige zu Spielbudget, Gewinnlimits, Billo-Variante vs. Profi-Tipp und Teilnahme – das ist die ausführliche Fassung.",
-  },
-  {
-    title: "Tipps",
-    href: "/bets",
-    text: "Hier siehst du die Spiele und gibst deine Tipps ab – entweder in der Billo-Variante (nur Endergebnis) oder in der Profi-Variante mit mehr Auswahl, Quoten und individuellem Punkteeinsatz.",
-  },
-  {
-    title: "WM Sieger 2026",
-    href: "/wm-sieger-2026",
-    text: "Tippe darauf, welches Team die WM gewinnen wird.",
-  },
-  {
-    title: "Rangliste",
-    href: "/leaderboard",
-    text: "Alle Teilnehmenden nach Punktestand im Vergleich – sortiert nach dem aktuellen Kontostand.",
-  },
-  {
-    title: "Dashboard",
-    href: "/dashboard",
-    text: "Nach dem Login: Punktekonto, Spielbudget-Übersicht, offene und vergangene Tipps sowie dein Profil (z. B. Bild).",
-  },
-] as const;
+export default async function HowItWorksPage() {
+  const m = getMessages(getLocale(await cookies())).howItWorks;
 
-export default function HowItWorksPage() {
+  const sections = [
+    { title: m.sectionRulesTitle, href: "/rules", text: m.sectionRulesText },
+    { title: m.sectionBetsTitle, href: "/bets", text: m.sectionBetsText },
+    { title: m.sectionWmTitle, href: "/wm-sieger-2026", text: m.sectionWmText },
+    { title: m.sectionLeaderboardTitle, href: "/leaderboard", text: m.sectionLeaderboardText },
+    { title: m.sectionDashboardTitle, href: "/dashboard", text: m.sectionDashboardText },
+  ] as const;
+
   return (
     <main
       className="relative flex flex-1 items-start bg-cover bg-center bg-no-repeat"
@@ -36,13 +20,16 @@ export default function HowItWorksPage() {
     >
       <div className="absolute inset-0 bg-black/45" />
       <div className="relative mx-auto w-full max-w-4xl px-6 py-10">
-        <h1 className="text-3xl font-bold text-white">So funktioniert&apos;s</h1>
+        <h1 className="text-3xl font-bold text-white">{m.title}</h1>
         <p className="mt-2 max-w-2xl text-sm text-zinc-100">
-          Kurzüberblick über die Reiter. Spielregeln, Zahlen und Limits stehen im{" "}
-          <Link href="/rules" className="font-medium text-white underline decoration-white/60 underline-offset-2 hover:decoration-white">
-            Regelwerk
+          {m.introBefore}{" "}
+          <Link
+            href="/rules"
+            className="font-medium text-white underline decoration-white/60 underline-offset-2 hover:decoration-white"
+          >
+            {m.introLink}
           </Link>
-          .
+          {m.introAfter}
         </p>
 
         <ul className="mt-6 space-y-3">

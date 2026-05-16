@@ -1,3 +1,6 @@
+import type { Locale } from "@/lib/i18n/types";
+import { displayTeamName } from "@/lib/team-display-names";
+
 export const WM_WINNER_EVENT_KEY = "WM_2026";
 /** Nominaler Einsatz pro Person; wird nicht vom Wallet abgebucht, solange der erste WM-Tipp möglich ist. */
 export const WM_WINNER_STAKE = 100;
@@ -22,16 +25,23 @@ export const WM_WINNER_FLAG_ISO: Record<string, string> = {
   Deutschland: "de",
 };
 
-export function wmWinnerDisplayLabel(option: { label: string; isField: boolean }): string {
-  if (option.isField) {
-    return "Piraten";
-  }
-  return option.label;
+export function wmWinnerPiratesLabel(locale: Locale): string {
+  return locale === "en" ? "Pirates" : "Piraten";
 }
 
-export function wmWinnerDisplayFromStoredLabel(label: string): string {
-  if (label === WM_WINNER_FIELD_DB_LABEL) {
-    return "Piraten";
+export function wmWinnerDisplayLabel(
+  option: { label: string; isField: boolean },
+  locale: Locale = "de",
+): string {
+  if (option.isField) {
+    return wmWinnerPiratesLabel(locale);
   }
-  return label;
+  return displayTeamName(option.label, locale);
+}
+
+export function wmWinnerDisplayFromStoredLabel(label: string, locale: Locale = "de"): string {
+  if (label === WM_WINNER_FIELD_DB_LABEL) {
+    return wmWinnerPiratesLabel(locale);
+  }
+  return displayTeamName(label, locale);
 }

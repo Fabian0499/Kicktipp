@@ -135,4 +135,13 @@ describe("profiBetConflictsOpenSet", () => {
       ),
     ).toBe(true);
   });
+
+  it("sperrt Handicap 2:0 Heim nicht ohne weitere offene Tipps (breite, aber keine Absicherung)", () => {
+    expect(
+      profiBetConflictsOpenSet(
+        { marketType: "HANDICAP_MATRIX", outcomeLabel: "HANDICAP:2:0:1" },
+        [],
+      ),
+    ).toBe(false);
+  });
 });

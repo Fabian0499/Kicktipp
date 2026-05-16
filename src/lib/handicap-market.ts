@@ -74,7 +74,12 @@ export function handicapMatrixOutcomeWins(outcomeLabel: string, homeScore: numbe
   );
 }
 
-export function formatHandicapMatrixOutcomeLabel(outcome: string, homeLabel = "Heim", awayLabel = "Auswärts"): string {
+export function formatHandicapMatrixOutcomeLabel(
+  outcome: string,
+  homeLabel = "Heim",
+  awayLabel = "Auswärts",
+  drawLabel = "Unentschieden",
+): string {
   const parsed = parseHandicapOutcome(outcome);
   if (!parsed) {
     return outcome;
@@ -85,7 +90,7 @@ export function formatHandicapMatrixOutcomeLabel(outcome: string, homeLabel = "H
     return `${handicap} ${homeLabel}`;
   }
   if (parsed.pickedOutcome === "X") {
-    return `${handicap} Unentschieden`;
+    return `${handicap} ${drawLabel}`;
   }
   return `${handicap} ${awayLabel}`;
 }

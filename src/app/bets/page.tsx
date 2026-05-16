@@ -1,7 +1,9 @@
+import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { BetsBoard } from "@/components/bets-board";
 import { sortMarketOptions } from "@/lib/market-option-order";
+import { createServerT } from "@/lib/i18n/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,7 @@ const marketOrder: Record<string, number> = {
 };
 
 export default async function BetsPage() {
+  const t = createServerT(await cookies());
   const currentUser = await getCurrentUser();
   const userMatchBudgets = currentUser
     ? await db.userMatchBudget.findMany({
@@ -126,7 +129,7 @@ export default async function BetsPage() {
     >
       <div className="absolute inset-0 bg-black/45" />
       <div className="relative mx-auto w-full max-w-4xl px-6 py-10">
-        <h1 className="text-3xl font-bold text-white">Tipps</h1>
+        <h1 className="text-3xl font-bold text-white">{t("bets.title")}</h1>
         <BetsBoard
           isAuthenticated={Boolean(currentUser)}
           currentUserId={currentUser?.id ?? null}

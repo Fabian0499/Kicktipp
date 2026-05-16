@@ -90,7 +90,8 @@ export const adminCreateMatchSchema = z.object({
       yes: oddValue,
       no: oddValue,
     }),
-    handicapMatrixRowCount: z.coerce.number().int().min(1).max(15),
+    handicapMatrixHomeRowCount: z.coerce.number().int().min(1).max(15),
+    handicapMatrixAwayRowCount: z.coerce.number().int().min(1).max(15),
     handicapMatrix: z
       .array(
         z.object({
@@ -152,9 +153,12 @@ export const adminCreateMatchSchema = z.object({
     },
   )
   .refine(
-    (data) => data.odds.handicapMatrix.length === data.odds.handicapMatrixRowCount * 2,
+    (data) =>
+      data.odds.handicapMatrix.length ===
+      data.odds.handicapMatrixHomeRowCount + data.odds.handicapMatrixAwayRowCount,
     {
-      message: "Handicap: Anzahl der Quotenzeilen muss zur eingetragenen Zeilenanzahl passen.",
+      message:
+        "Handicap: Anzahl der Quotenzeilen muss zu Heim- und Auswärts-Zeilenanzahl passen.",
       path: ["odds", "handicapMatrix"],
     },
   )
