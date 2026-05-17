@@ -21,16 +21,6 @@ export default async function HowItWorksPage() {
       <div className="absolute inset-0 bg-black/45" />
       <div className="relative mx-auto w-full max-w-4xl px-6 py-10">
         <h1 className="text-3xl font-bold text-white">{m.title}</h1>
-        <p className="mt-2 max-w-2xl text-sm text-zinc-100">
-          {m.introBefore}{" "}
-          <Link
-            href="/rules"
-            className="font-medium text-white underline decoration-white/60 underline-offset-2 hover:decoration-white"
-          >
-            {m.introLink}
-          </Link>
-          {m.introAfter}
-        </p>
 
         <ul className="mt-6 space-y-3">
           {sections.map((section) => (

@@ -21,6 +21,7 @@ import { FormEvent, Fragment, useEffect, useMemo, useState } from "react";
 import { payoutFromGrossReturn } from "@/lib/bet-payout";
 import { profiBetConflictsOpenSet } from "@/lib/betting-conflicts";
 import { MIN_BETTABLE_ODDS, oddsViolateMinimumForMarket } from "@/lib/min-bettable-odds";
+import { parseBilloSimpleTipInput } from "@/lib/simple-tip";
 import {
   QUALIFY_OUTCOME_ET_AWAY,
   QUALIFY_OUTCOME_ET_HOME,
@@ -470,13 +471,12 @@ export function BetsBoard({
     }
 
     const input = simpleTipInputs[matchId] ?? { home: "", away: "", saving: false };
-    const predictedHome = Number(input.home);
-    const predictedAway = Number(input.away);
-
-    if (!Number.isInteger(predictedHome) || predictedHome < 0 || !Number.isInteger(predictedAway) || predictedAway < 0) {
-      setError("Bitte ein gültiges Ergebnis für den Einfach-Tipp eingeben.");
+    const parsed = parseBilloSimpleTipInput(input.home, input.away);
+    if (!parsed) {
+      setError(t("bets.simpleTipScoreRequired"));
       return;
     }
+    const { predictedHome, predictedAway } = parsed;
     setError("");
     setMessage("");
     setSimpleTipInputs((current) => ({
@@ -699,6 +699,9 @@ export function BetsBoard({
                     <section className="rounded-md border bg-white p-4">
                       {(() => {
                         const hasSimpleTip = Boolean(localSimpleTipByMatch[match.id]);
+                        const simpleHome = simpleTipInputs[match.id]?.home ?? "";
+                        const simpleAway = simpleTipInputs[match.id]?.away ?? "";
+                        const canPlaceSimpleTip = parseBilloSimpleTipInput(simpleHome, simpleAway) !== null;
                         return (
                           <>
                       <div className="mt-3 flex flex-wrap items-end gap-2">
@@ -775,6 +778,7 @@ export function BetsBoard({
                             !isAuthenticated ||
                             (simpleTipInputs[match.id]?.saving ?? false) ||
                             hasSimpleTip ||
+                            !canPlaceSimpleTip ||
                             remainingBudget < simpleTotalStake
                           }
                           onClick={() => placeSimpleTip(match.id)}

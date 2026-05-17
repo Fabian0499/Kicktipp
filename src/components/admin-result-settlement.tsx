@@ -40,13 +40,30 @@ const emptyScore = (): ScoreFormState => ({
   knockoutAdvancingIsHome: "",
 });
 
+function scoreFromMatch(match: MatchItem): ScoreFormState {
+  return {
+    homeHalfTimeScore: match.homeHalfTimeScore != null ? String(match.homeHalfTimeScore) : "",
+    awayHalfTimeScore: match.awayHalfTimeScore != null ? String(match.awayHalfTimeScore) : "",
+    homeScore: match.homeScore != null ? String(match.homeScore) : "",
+    awayScore: match.awayScore != null ? String(match.awayScore) : "",
+    totalCards: match.totalCards != null ? String(match.totalCards) : "",
+    totalCorners: match.totalCorners != null ? String(match.totalCorners) : "",
+    knockoutDecidedBy: "",
+    knockoutAdvancingIsHome: "",
+  };
+}
+
 export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [scores, setScores] = useState<Record<string, ScoreFormState>>({});
+  const [correctionOpen, setCorrectionOpen] = useState<Record<string, boolean>>({});
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  async function settle(match: MatchItem) {
+  const openMatches = matches.filter((match) => !match.settledAt);
+  const settledMatches = matches.filter((match) => Boolean(match.settledAt));
+
+  async function submitSettlement(match: MatchItem, method: "POST" | "PATCH") {
     const scoreEntry = scores[match.id] ?? emptyScore();
     const homeHalfTimeScore = Number(scoreEntry.homeHalfTimeScore);
     const awayHalfTimeScore = Number(scoreEntry.awayHalfTimeScore);
@@ -117,40 +134,58 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
     }
 
     const response = await fetch(`/api/admin/matches/${match.id}/result`, {
-      method: "POST",
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Auswertung fehlgeschlagen.");
+      setError(body?.error ?? (method === "PATCH" ? "Korrektur fehlgeschlagen." : "Auswertung fehlgeschlagen."));
       setSavingId(null);
       return;
     }
 
-    const body = (await response.json()) as { settledCount: number };
-    setMessage(`Auswertung abgeschlossen. Verarbeitete Tipps: ${body.settledCount}`);
+    const body = (await response.json()) as {
+      settledCount: number;
+      reversedWinnings?: number;
+      reversedBets?: number;
+    };
+    if (method === "PATCH") {
+      setMessage(
+        `Korrektur abgeschlossen. ${body.reversedBets ?? 0} Tipps neu ausgewertet, ${body.reversedWinnings ?? 0} Gewinn-Punkte zurückgebucht, ${body.settledCount} Tipps verarbeitet.`,
+      );
+    } else {
+      setMessage(`Auswertung abgeschlossen. Verarbeitete Tipps: ${body.settledCount}`);
+    }
     setSavingId(null);
     window.location.reload();
+  }
+
+  function openCorrectionForm(match: MatchItem) {
+    setScores((current) => ({ ...current, [match.id]: scoreFromMatch(match) }));
+    setCorrectionOpen((current) => ({ ...current, [match.id]: true }));
+    setError("");
+    setMessage("");
   }
 
   return (
     <section className="mt-8 rounded-xl border bg-white p-6 text-zinc-900 shadow-sm">
       <h2 className="text-xl font-semibold">Ergebnisse eintragen & auswerten</h2>
       <p className="mt-1 text-sm text-zinc-600">
-        Ergebnis eintragen, bestätigen und Gewinne werden automatisch den Wallets gutgeschrieben.
+        Ergebnis eintragen oder bei Bedarf eine bestehende Auswertung korrigieren. Gewinne werden automatisch den
+        Wallets gutgeschrieben bzw. zurückgebucht.
       </p>
 
       {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
       {message ? <p className="mt-3 text-sm text-emerald-700">{message}</p> : null}
 
-      <div className="mt-4 space-y-3">
-        {matches.length === 0 ? (
-          <p className="text-sm text-zinc-600">Keine Spiele vorhanden.</p>
+      <h3 className="mt-6 text-lg font-semibold">Neue Auswertungen</h3>
+      <div className="mt-3 space-y-3">
+        {openMatches.length === 0 ? (
+          <p className="text-sm text-zinc-600">Keine offenen Spiele zur Auswertung.</p>
         ) : (
-          matches.map((match) => {
-            const isSettled = Boolean(match.settledAt);
+          openMatches.map((match) => {
             const score = scores[match.id] ?? emptyScore();
 
             return (
@@ -159,14 +194,6 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                   {match.homeTeam} vs. {match.awayTeam}
                 </p>
                 <p className="text-sm text-zinc-600">Anstoß: {new Date(match.startsAt).toLocaleString("de-DE")}</p>
-                {isSettled ? (
-                  <p className="mt-2 text-sm font-medium text-emerald-700">
-                    Bereits ausgewertet - Halbzeit: {match.homeHalfTimeScore} : {match.awayHalfTimeScore}, Endstand:{" "}
-                    {match.homeScore} : {match.awayScore}
-                    {match.totalCards != null ? `, Kort gesamt: ${match.totalCards}` : null}
-                    {match.totalCorners != null ? `, Hjornespark gesamt: ${match.totalCorners}` : null}
-                  </p>
-                ) : (
                   <div className="mt-3 flex flex-col gap-3">
                     <div className="flex flex-wrap items-end gap-3">
                       <div>
@@ -370,10 +397,212 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                       <button
                         type="button"
                         disabled={savingId === match.id}
-                        onClick={() => settle(match)}
+                        onClick={() => submitSettlement(match, "POST")}
                         className="cursor-pointer rounded-md bg-black px-3 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {savingId === match.id ? "Wertet aus..." : "Ergebnis bestätigen"}
+                      </button>
+                    </div>
+                  </div>
+              </article>
+            );
+          })
+        )}
+      </div>
+
+      <h3 className="mt-8 text-lg font-semibold">Auswertung korrigieren</h3>
+      <p className="mt-1 text-sm text-zinc-600">
+        Bereits ausgewertete Spiele: alte Gewinne werden zurückgebucht, alle Tipps neu gewertet. Bei K.-o.-Spielen mit
+        „Methode des Sieges“ die Entscheidung erneut angeben.
+      </p>
+      <div className="mt-3 space-y-3">
+        {settledMatches.length === 0 ? (
+          <p className="text-sm text-zinc-600">Noch keine ausgewerteten Spiele.</p>
+        ) : (
+          settledMatches.map((match) => {
+            const score = scores[match.id] ?? emptyScore();
+            const showForm = correctionOpen[match.id];
+
+            return (
+              <article key={`correct-${match.id}`} className="rounded-md border border-amber-200 bg-amber-50/40 p-4">
+                <p className="font-semibold">
+                  {match.homeTeam} vs. {match.awayTeam}
+                </p>
+                <p className="text-sm text-zinc-600">Anstoß: {new Date(match.startsAt).toLocaleString("de-DE")}</p>
+                <p className="mt-2 text-sm font-medium text-emerald-800">
+                  Aktuell – Halbzeit: {match.homeHalfTimeScore} : {match.awayHalfTimeScore}, Endstand: {match.homeScore}{" "}
+                  : {match.awayScore}
+                  {match.totalCards != null ? `, Kort: ${match.totalCards}` : null}
+                  {match.totalCorners != null ? `, Hjornespark: ${match.totalCorners}` : null}
+                </p>
+                {!showForm ? (
+                  <button
+                    type="button"
+                    onClick={() => openCorrectionForm(match)}
+                    className="mt-3 cursor-pointer rounded-md border border-amber-800 bg-white px-3 py-1.5 text-sm font-medium text-amber-950 hover:bg-amber-50"
+                  >
+                    Ergebnis ändern
+                  </button>
+                ) : (
+                  <div className="mt-3 flex flex-col gap-3">
+                    <p className="text-xs text-amber-950">Neues Ergebnis eingeben:</p>
+                    <div className="flex flex-wrap items-end gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-zinc-700">Halbzeit</label>
+                        <div className="mt-1 flex items-end gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            value={score.homeHalfTimeScore}
+                            onChange={(e) =>
+                              setScores((c) => ({
+                                ...c,
+                                [match.id]: { ...score, homeHalfTimeScore: e.target.value },
+                              }))
+                            }
+                            className="w-20 rounded-md border border-zinc-300 px-2 py-1"
+                          />
+                          <span className="pb-2 font-semibold">:</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={score.awayHalfTimeScore}
+                            onChange={(e) =>
+                              setScores((c) => ({
+                                ...c,
+                                [match.id]: { ...score, awayHalfTimeScore: e.target.value },
+                              }))
+                            }
+                            className="w-20 rounded-md border border-zinc-300 px-2 py-1"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-zinc-700">Endstand</label>
+                        <div className="mt-1 flex items-end gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            value={score.homeScore}
+                            onChange={(e) =>
+                              setScores((c) => ({ ...c, [match.id]: { ...score, homeScore: e.target.value } }))
+                            }
+                            className="w-20 rounded-md border border-zinc-300 px-2 py-1"
+                          />
+                          <span className="pb-2 font-semibold">:</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={score.awayScore}
+                            onChange={(e) =>
+                              setScores((c) => ({ ...c, [match.id]: { ...score, awayScore: e.target.value } }))
+                            }
+                            className="w-20 rounded-md border border-zinc-300 px-2 py-1"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-zinc-700">Kort gesamt</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={50}
+                          value={score.totalCards}
+                          onChange={(e) =>
+                            setScores((c) => ({ ...c, [match.id]: { ...score, totalCards: e.target.value } }))
+                          }
+                          className="mt-1 w-24 rounded-md border border-zinc-300 px-2 py-1"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-zinc-700">Hjornespark gesamt</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={50}
+                          value={score.totalCorners}
+                          onChange={(e) =>
+                            setScores((c) => ({ ...c, [match.id]: { ...score, totalCorners: e.target.value } }))
+                          }
+                          className="mt-1 w-24 rounded-md border border-zinc-300 px-2 py-1"
+                        />
+                      </div>
+                    </div>
+                    {match.isKnockout && match.usesQualifyMethodMatrix ? (
+                      <div className="w-full max-w-xl rounded-md border border-violet-200 bg-violet-50/80 p-3 text-sm">
+                        <p className="font-semibold text-violet-950">Methode des Sieges (K.-o.)</p>
+                        <select
+                          value={score.knockoutDecidedBy}
+                          onChange={(e) =>
+                            setScores((c) => ({
+                              ...c,
+                              [match.id]: {
+                                ...score,
+                                knockoutDecidedBy: e.target.value as ScoreFormState["knockoutDecidedBy"],
+                                knockoutAdvancingIsHome:
+                                  e.target.value === "PENALTIES" ? score.knockoutAdvancingIsHome : "",
+                              },
+                            }))
+                          }
+                          className="mt-2 w-full max-w-sm rounded-md border border-violet-300 bg-white px-2 py-1.5"
+                        >
+                          <option value="">Bitte wählen …</option>
+                          <option value="REGULATION">Reguläre Spielzeit</option>
+                          <option value="EXTRA_TIME">Verlängerung</option>
+                          <option value="PENALTIES">Elfmeterschießen</option>
+                        </select>
+                        {score.knockoutDecidedBy === "PENALTIES" ? (
+                          <fieldset className="mt-3">
+                            <legend className="text-xs font-semibold text-violet-950">Nach Elfmeter weiter</legend>
+                            <div className="mt-1 flex flex-wrap gap-3 text-sm">
+                              <label className="inline-flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name={`ko-correct-${match.id}`}
+                                  checked={score.knockoutAdvancingIsHome === "home"}
+                                  onChange={() =>
+                                    setScores((c) => ({
+                                      ...c,
+                                      [match.id]: { ...score, knockoutAdvancingIsHome: "home" },
+                                    }))
+                                  }
+                                />
+                                {match.homeTeam}
+                              </label>
+                              <label className="inline-flex items-center gap-2">
+                                <input
+                                  type="radio"
+                                  name={`ko-correct-${match.id}`}
+                                  checked={score.knockoutAdvancingIsHome === "away"}
+                                  onChange={() =>
+                                    setScores((c) => ({
+                                      ...c,
+                                      [match.id]: { ...score, knockoutAdvancingIsHome: "away" },
+                                    }))
+                                  }
+                                />
+                                {match.awayTeam}
+                              </label>
+                            </div>
+                          </fieldset>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={savingId === match.id}
+                        onClick={() => submitSettlement(match, "PATCH")}
+                        className="cursor-pointer rounded-md bg-amber-800 px-3 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {savingId === match.id ? "Korrigiert…" : "Korrektur speichern & neu auswerten"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCorrectionOpen((c) => ({ ...c, [match.id]: false }))}
+                        className="cursor-pointer rounded-md border border-zinc-300 bg-white px-3 py-1.5 text-sm"
+                      >
+                        Abbrechen
                       </button>
                     </div>
                   </div>

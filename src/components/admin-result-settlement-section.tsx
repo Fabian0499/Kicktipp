@@ -31,7 +31,7 @@ export function AdminResultSettlementSection({ matches }: { matches: MatchItem[]
       onToggle={onToggle}
     >
       <summary className="cursor-pointer text-xl font-semibold text-zinc-900">
-        Ergebnis eintragen &amp; Auswertung
+        Ergebnis eintragen, Auswertung &amp; Korrektur
       </summary>
       <AdminResultSettlement matches={matches} />
     </details>

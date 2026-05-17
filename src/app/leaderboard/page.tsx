@@ -45,11 +45,10 @@ export default async function LeaderboardPage() {
         <div className="flex items-center justify-between gap-4">
           <h1 className="text-3xl font-bold text-white">{t("leaderboard.title")}</h1>
           <p className="rounded-md border border-white/40 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white">
-            {t("leaderboard.rankLabel")}: {isHiddenFromLeaderboard ? t("leaderboard.rankHidden") : (currentUserRank ?? "-")}{" "}
-            {t("leaderboard.rankOf")} {ranking.length}
+            {t("leaderboard.rankLabel")}:{" "}
+            {isHiddenFromLeaderboard ? t("leaderboard.rankHidden") : (currentUserRank ?? "-")}
           </p>
         </div>
-        <p className="mt-2 text-white">{t("leaderboard.subtitle")}</p>
         {isHiddenFromLeaderboard ? (
           <p className="mt-2 rounded-md border border-amber-300/60 bg-amber-500/20 px-3 py-2 text-sm text-amber-50">
             {t("leaderboard.hiddenNotice")}

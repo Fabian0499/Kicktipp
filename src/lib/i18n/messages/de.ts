@@ -93,9 +93,6 @@ export const de = {
   },
   howItWorks: {
     title: "So funktioniert's",
-    introBefore: "Kurzüberblick über die Reiter. Spielregeln, Zahlen und Limits stehen im",
-    introLink: "Regelwerk",
-    introAfter: ".",
     sectionRulesTitle: "Regelwerk",
     sectionRulesText:
       "Alles Wichtige zu Spielbudget, Gewinnlimits, Billo-Variante vs. Profi-Tipp und Teilnahme – das ist die ausführliche Fassung.",
@@ -209,6 +206,7 @@ export const de = {
     simpleTipPlaced: "Du hast getippt: {score}",
     placeSimpleTip: "Tipp platzieren",
     simpleTipSuccessBanner: "Wette wurde erfolgreich platziert",
+    simpleTipScoreRequired: "Bitte ein Ergebnis für beide Teams eingeben.",
     simpleTipSaveFailed: "Einfach-Tipp konnte nicht gespeichert werden.",
     simpleTipSavedMessage: "Einfach-Tipp wurde erfolgreich platziert.",
     loginRequired: "Zum Platzieren einer Wette bitte zuerst einloggen.",
@@ -231,7 +229,7 @@ export const de = {
     categoryCards: "Kort",
     categoryGoals: "Über / Unter Tore",
     categoryHandicap: "Handicap",
-    categoryExactScore: "Exact Score",
+    categoryExactScore: "Genaues Ergebnis",
     categoryQualify: "Qualifiziert sich",
     categoryQualifyMethod: "Methode des Sieges",
     qualifySubtitle: "Wer zieht in die nächste Runde ein?",
@@ -239,9 +237,9 @@ export const de = {
     qualifyMethodPen: "Nach Elfmeterschießen",
     exactScoreMore: "Weitere angebotene Ergebnisse",
     tooltip1x2:
-      "Wie wird der Ausgang des Spiels sein?\n\nSieg der Heimmannschaft, Unentschieden oder Sieg der Auswärtsmannschaft (Anzeige mit Teamnamen).",
+      "Welches der beiden Teams hat nach Ende der regulären Spielzeit gewonnen? Oder endet das Match in einem Unentschieden?",
     tooltipBtts:
-      "Entscheide, ob beide Mannschaften ein Tor erzielen oder nicht. Es spielt keine Rolle, wer als Sieger oder Verlierer des Spiels hervorgeht.\n\nBEISPIEL\nMarkt: Treffen beide?\nAuswahl: Ja\n\nIn diesem Beispiel wettest du, dass beide Mannschaften im gesamten Spiel mindestens ein Tor schießen. Um die Wette zu gewinnen, müssen mindestens 2 Tore erzielt werden.",
+      "Hat jedes Team nach Ende der regulären Spielzeit mindestens ein Tor erzielt? Oder bleibt nach 90 Minuten mindestens ein Team ohne Torerfolg?",
     tooltipHtFt:
       "Dieser Tipp besteht aus zwei Teilen:\n\n1.\nWelches Team führt zur Halbzeit oder steht es zur Halbzeit unentschieden\n\n2.\nWelches Team hat das Match nach Ende der regulären Spielzeit gewonnen oder endet das Match nach Ende der regulären Spielzeit unentschieden\n\nBeide Teile müssen korrekt sein, damit es Punkte gibt.",
     tooltipCorners:
@@ -249,7 +247,7 @@ export const de = {
     tooltipCards:
       "Wie viele Karten gab es insgesamt nach Ende der regulären Spielzeit? Auch diese Kategorie gibt's auf dänisch.\n\nBei Wetten auf Karten muss man Folgendes wissen:\n\nEine gelbe Karte zählt als eine Karte; eine rote Karte zählt als zwei Karten. Ein Spieler kann maximal drei Karten bekommen.\n\nSehr, sehr wichtig: Karten, die anderen Akteuren als den Spielern (z. B. Trainer, Ersatzspieler oder ausgewechselte Spieler) gezeigt werden, zählen nicht.",
     tooltipGoals:
-      "Wähle, ob die Gesamtzahl der von beiden Mannschaften erzielten Tore unter, exakt oder über einer bestimmten Anzahl liegen wird. Der Gewinner und der Verlierer des Spiels spielen keine Rolle.\n\nBEISPIEL\nMarkt: Über/Unter Tore\nAuswahl: Über 1 Tor\n\nIn diesem Beispiel wettest du, dass im Spiel mehr als 1 Tor fällt. Dies bedeutet, dass mindestens 2 Tore geschossen werden müssen.",
+      "Wie viele Tore haben beide Teams nach Ende der regulären Spielzeit zusammen erzielt?",
     tooltipHandicap:
       "Bei dieser Tippart bekommt ein Team einen fiktiven Vorsprung von einem oder mehreren Toren:\n\nHandicap (2:0) bedeutet, dass Team 1 einen Vorsprung von zwei Toren bekommt,\n\nHandicap (0:1) bedeutet, dass Team 2 einen Vorsprung von einem Tor bekommt\n\nund so weiter.\n\nGetippt wird dann, ob das tatsächliche Ergebnis nach Ende der regulären Spielzeit zusammen mit den fiktiven Toren aus dem Handicap zu einem Sieg von Team 1, zu einem Unentschieden oder zu einem Sieg von Team 2 führt.\n\nWer weiterhin Schwierigkeiten mit dieser Kategorie hat, kann sich gerne an die Admins wenden.",
     tooltipExactScore: "Was wird der genaue Endstand nach Ende der regulären Spielzeit sein?",
@@ -304,7 +302,7 @@ export const de = {
   markets: {
     ONE_X_TWO: "1X2",
     HALF_TIME_FULL_TIME: "Halbzeit / Endstand",
-    EXACT_SCORE: "Exact Score",
+    EXACT_SCORE: "Genaues Ergebnis",
     BOTH_TEAMS_TO_SCORE: "Beide Teams treffen",
     TO_QUALIFY: "Qualifiziert sich",
     GOALS_MATRIX: "Über / Unter Tore",

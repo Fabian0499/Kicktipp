@@ -92,9 +92,6 @@ export const en = {
   },
   howItWorks: {
     title: "How it works",
-    introBefore: "A quick overview of the tabs. Rules, numbers and limits are in the",
-    introLink: "rules",
-    introAfter: ".",
     sectionRulesTitle: "Rules",
     sectionRulesText:
       "Everything about match budgets, win limits, Billo vs Pro mode, and participation – the full version.",
@@ -203,6 +200,7 @@ export const en = {
     simpleTipPlaced: "Your tip: {score}",
     placeSimpleTip: "Place tip",
     simpleTipSuccessBanner: "Bet placed successfully",
+    simpleTipScoreRequired: "Please enter a score for both teams.",
     simpleTipSaveFailed: "Could not save Billo tip.",
     simpleTipSavedMessage: "Billo tip placed successfully.",
     loginRequired: "Please log in to place a bet.",
@@ -233,9 +231,9 @@ export const en = {
     qualifyMethodPen: "After penalties",
     exactScoreMore: "Other offered results",
     tooltip1x2:
-      "What will the match outcome be?\n\nHome win, draw or away win (shown with team names).",
+      "Which team has won after regular time? Or does the match end in a draw?",
     tooltipBtts:
-      "Will both teams score or not? Match winner does not matter.\n\nEXAMPLE\nMarket: Both score?\nPick: Yes\n\nBoth teams must score at least once (2+ goals in total).",
+      "Has each team scored at least once after regular time? Or does at least one team finish the 90 minutes without a goal?",
     tooltipHtFt:
       "This tip has two parts:\n\n1. Who leads at half-time (or draw at HT)\n2. Who wins after 90 minutes (or draw)\n\nBoth must be correct to win.",
     tooltipCorners:
@@ -243,7 +241,7 @@ export const en = {
     tooltipCards:
       "How many cards in regular time?\n\nYellow = 1 card, red = 2. Max 3 cards per player. Cards to non-players do not count.",
     tooltipGoals:
-      "Will total goals be under, exactly or over a line? Match winner does not matter.\n\nEXAMPLE\nOver 1 goal = at least 2 goals in the match.",
+      "How many goals have both teams scored in total after regular time?",
     tooltipHandicap:
       "One team gets a virtual goal advantage.\n\nExample 0:1 means away starts +1 goal.\n\nYou tip the result after applying the handicap (home win, draw or away win).\n\nAsk admins if unsure.",
     tooltipExactScore: "What will the exact score be after 90 minutes?",
