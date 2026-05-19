@@ -94,7 +94,7 @@ function displayOutcomeLabel(
     return formatHalfTimeFullTimeDisplayLabel(outcome, homeLabel, awayLabel, drawLabel);
   }
   if (marketType === "HANDICAP_MATRIX") {
-    return formatHandicapMatrixOutcomeLabel(outcome, t("common.home"), t("common.away"), drawLabel);
+    return formatHandicapMatrixOutcomeLabel(outcome, homeLabel, awayLabel, drawLabel);
   }
   if (marketType === "GOALS_MATRIX") {
     return formatGoalsMatrixOutcomeLabel(outcome, locale);

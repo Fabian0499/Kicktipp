@@ -227,7 +227,7 @@ export const de = {
     categoryHtFt: "Halbzeit / Endstand",
     categoryCorners: "Hjornespark",
     categoryCards: "Kort",
-    categoryGoals: "Über / Unter Tore",
+    categoryGoals: "Tore",
     categoryHandicap: "Handicap",
     categoryExactScore: "Genaues Ergebnis",
     categoryQualify: "Qualifiziert sich",

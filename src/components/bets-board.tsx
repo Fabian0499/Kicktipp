@@ -175,15 +175,42 @@ function teamLabelsFromMatchLabel(matchLabel: string): [string | undefined, stri
   return [homeLabel || undefined, awayLabel || undefined];
 }
 
+function CategoryHeading({ title, tooltip }: { title: string; tooltip: string }) {
+  return (
+    <h3 className="grid w-full grid-cols-[1fr_auto_1fr] items-center font-semibold text-black">
+      <span className="col-start-1 justify-self-start">{title}</span>
+      <span className="col-start-2 justify-self-center">
+        <InfoTooltip text={tooltip} />
+      </span>
+    </h3>
+  );
+}
+
 function InfoTooltip({ text }: { text: string }) {
   return (
-    <span className="group relative inline-flex">
-      <span
-        tabIndex={0}
-        aria-label={text}
-        className="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-zinc-400 bg-white text-[10px] font-bold leading-none text-zinc-700"
-      >
-        ?
+    <span className="group relative inline-flex shrink-0 align-middle">
+      <span tabIndex={0} aria-label={text} className="inline-flex cursor-help">
+        <svg
+          width={16}
+          height={16}
+          viewBox="0 0 16 16"
+          className="block shrink-0"
+          aria-hidden
+        >
+          <circle cx={8} cy={8} r={7} className="fill-white stroke-zinc-400" strokeWidth={1} />
+          <text
+            x={8}
+            y={8}
+            textAnchor="middle"
+            dominantBaseline="central"
+            className="fill-zinc-700"
+            fontSize={11}
+            fontWeight={700}
+            fontFamily="Arial, Helvetica, sans-serif"
+          >
+            ?
+          </text>
+        </svg>
       </span>
       <span className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden w-64 -translate-x-1/2 whitespace-pre-line rounded-md border border-zinc-200 bg-white p-2 text-xs font-normal leading-snug text-zinc-800 shadow-lg group-hover:block group-focus-within:block">
         {text}
@@ -813,10 +840,7 @@ export function BetsBoard({
                     <>
                   {combinedOutcomeMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
-                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        {t("bets.category1x2")}
-                        <InfoTooltip text={t("bets.tooltip1x2")} />
-                      </h3>
+                      <CategoryHeading title={t("bets.category1x2")} tooltip={t("bets.tooltip1x2")} />
                       <div className="mt-3 space-y-3">
                         {combinedOutcomeMarkets.map((market) => (
                           <div key={market.id} className="grid gap-2 md:grid-cols-3">
@@ -929,10 +953,10 @@ export function BetsBoard({
                         if (isMethodMatrix) {
                           return (
                             <section key={market.id} className="rounded-md border bg-white p-3">
-                              <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                                {t("bets.categoryQualifyMethod")}
-                                <InfoTooltip text={t("bets.tooltipQualifyMethod")} />
-                              </h3>
+                              <CategoryHeading
+                                title={t("bets.categoryQualifyMethod")}
+                                tooltip={t("bets.tooltipQualifyMethod")}
+                              />
                               <div className="mt-3 overflow-x-auto rounded-md border border-zinc-200 bg-white">
                                 <table className="w-full min-w-[22rem] border-collapse text-sm">
                                   <thead>
@@ -966,10 +990,10 @@ export function BetsBoard({
 
                         return (
                           <section key={market.id} className="rounded-md border bg-white p-3">
-                            <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                              {t("bets.categoryQualify")}
-                              <InfoTooltip text={t("bets.tooltipQualify")} />
-                            </h3>
+                            <CategoryHeading
+                              title={t("bets.categoryQualify")}
+                              tooltip={t("bets.tooltipQualify")}
+                            />
                             <p className="mt-1 text-xs text-zinc-600">{t("bets.qualifySubtitle")}</p>
                             <div className="mt-2 grid gap-2 md:grid-cols-2">
                               {market.options.map((option) => {
@@ -1028,10 +1052,7 @@ export function BetsBoard({
 
                   {bttsMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
-                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        {t("bets.categoryBtts")}
-                        <InfoTooltip text={t("bets.tooltipBtts")} />
-                      </h3>
+                      <CategoryHeading title={t("bets.categoryBtts")} tooltip={t("bets.tooltipBtts")} />
                       <div className="mt-3 space-y-3">
                         {bttsMarkets.map((market) => (
                           <div key={market.id} className="grid gap-2 md:grid-cols-3">
@@ -1090,10 +1111,7 @@ export function BetsBoard({
 
                   {halfTimeFullTimeMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
-                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        {t("bets.categoryHtFt")}
-                        <InfoTooltip text={t("bets.tooltipHtFt")} />
-                      </h3>
+                      <CategoryHeading title={t("bets.categoryHtFt")} tooltip={t("bets.tooltipHtFt")} />
                       <div className="mt-3 space-y-3">
                         {halfTimeFullTimeMarkets.map((market) => (
                           <div key={market.id} className="grid gap-2 md:grid-cols-3">
@@ -1153,10 +1171,7 @@ export function BetsBoard({
 
                   {cornersMatrixMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
-                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        {t("bets.categoryCorners")}
-                        <InfoTooltip text={t("bets.tooltipCorners")} />
-                      </h3>
+                      <CategoryHeading title={t("bets.categoryCorners")} tooltip={t("bets.tooltipCorners")} />
                       <div className="mt-3 space-y-4">
                         {cornersMatrixMarkets.map((market) => {
                           const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
@@ -1249,10 +1264,7 @@ export function BetsBoard({
 
                   {cardsMatrixMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
-                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        {t("bets.categoryCards")}
-                        <InfoTooltip text={t("bets.tooltipCards")} />
-                      </h3>
+                      <CategoryHeading title={t("bets.categoryCards")} tooltip={t("bets.tooltipCards")} />
                       <div className="mt-3 space-y-4">
                         {cardsMatrixMarkets.map((market) => {
                           const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
@@ -1395,10 +1407,7 @@ export function BetsBoard({
 
                   {goalsMatrixMarkets.length > 0 || goalMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
-                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        {t("bets.categoryGoals")}
-                        <InfoTooltip text={t("bets.tooltipGoals")} />
-                      </h3>
+                      <CategoryHeading title={t("bets.categoryGoals")} tooltip={t("bets.tooltipGoals")} />
                       <div className="mt-3 space-y-4">
                         {goalsMatrixMarkets.map((market) => {
                           const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
@@ -1545,10 +1554,7 @@ export function BetsBoard({
 
                   {handicapMatrixMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
-                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        {t("bets.categoryHandicap")}
-                        <InfoTooltip text={t("bets.tooltipHandicap")} />
-                      </h3>
+                      <CategoryHeading title={t("bets.categoryHandicap")} tooltip={t("bets.tooltipHandicap")} />
                       <div className="mt-3 space-y-4">
                         {handicapMatrixMarkets.map((market) => {
                           const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));
@@ -1559,13 +1565,9 @@ export function BetsBoard({
                                 <thead>
                                   <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
                                     <th className="px-2 py-2 font-semibold text-black">{t("common.handicap")}</th>
-                                    <th className="px-2 py-2 font-semibold text-black">
-                                      {t("common.home")} ({homeTeamLabel})
-                                    </th>
+                                    <th className="px-2 py-2 font-semibold text-black">{homeTeamLabel}</th>
                                     <th className="px-2 py-2 font-semibold text-black">{drawLabel}</th>
-                                    <th className="px-2 py-2 font-semibold text-black">
-                                      {t("common.away")} ({awayTeamLabel})
-                                    </th>
+                                    <th className="px-2 py-2 font-semibold text-black">{awayTeamLabel}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -1648,10 +1650,7 @@ export function BetsBoard({
 
                   {exactScoreMarkets.length > 0 ? (
                     <section className="rounded-md border bg-white p-3">
-                      <h3 className="inline-flex items-center gap-1.5 font-semibold text-black">
-                        {t("bets.categoryExactScore")}
-                        <InfoTooltip text={t("bets.tooltipExactScore")} />
-                      </h3>
+                      <CategoryHeading title={t("bets.categoryExactScore")} tooltip={t("bets.tooltipExactScore")} />
                       <div className="mt-3 space-y-3">
                         {exactScoreMarkets.map((market) => {
                           const byOutcome = new Map(market.options.map((o) => [o.outcome, o]));

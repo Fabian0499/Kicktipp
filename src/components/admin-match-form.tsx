@@ -543,7 +543,7 @@ export function AdminMatchForm() {
           <div className="mb-4 flex flex-wrap gap-6">
             <div>
               <label className="block text-xs font-semibold text-zinc-800">
-                Zeilen Heim ({homeTeam || "Heim"})
+                Zeilen {homeTeam || "Heimteam"}
               </label>
               <input
                 name="handicapMatrixHomeRowCount"
@@ -564,7 +564,7 @@ export function AdminMatchForm() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-zinc-800">
-                Zeilen Auswärts ({awayTeam || "Gast"})
+                Zeilen {awayTeam || "Auswärtsteam"}
               </label>
               <input
                 name="handicapMatrixAwayRowCount"
@@ -589,9 +589,9 @@ export function AdminMatchForm() {
               <thead>
                 <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
                   <th className="px-3 py-2 font-semibold text-black">Handicap</th>
-                  <th className="px-3 py-2 font-semibold text-black">Heim ({homeTeam || "Heimteam"})</th>
+                  <th className="px-3 py-2 font-semibold text-black">{homeTeam || "Heimteam"}</th>
                   <th className="px-3 py-2 font-semibold text-black">Unentschieden</th>
-                  <th className="px-3 py-2 font-semibold text-black">Auswärts ({awayTeam || "Auswärtsteam"})</th>
+                  <th className="px-3 py-2 font-semibold text-black">{awayTeam || "Auswärtsteam"}</th>
                 </tr>
               </thead>
               <tbody>
