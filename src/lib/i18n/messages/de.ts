@@ -212,7 +212,7 @@ export const de = {
     simpleTipSaveFailed: "Einfach-Tipp konnte nicht gespeichert werden.",
     simpleTipSavedMessage: "Einfach-Tipp wurde erfolgreich platziert.",
     loginRequired: "Zum Platzieren einer Wette bitte zuerst einloggen.",
-    betSlip: "Wettschein",
+    betSlip: "Tipp",
     close: "Schließen",
     slipEmpty: "Keine Auswahl. Klicke auf ein Quotenfeld.",
     placeBets: "Wetten platzieren",

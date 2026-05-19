@@ -1784,8 +1784,7 @@ export function BetsBoard({
           isSlipOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold">{t("bets.betSlip")}</h3>
+        <div className="flex justify-end">
           <button
             type="button"
             onClick={() => setIsSlipOpen(false)}

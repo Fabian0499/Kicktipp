@@ -110,7 +110,7 @@ export function AdminMatchOddsEditor({ matches }: { matches: MatchRow[] }) {
 
   return (
     <details
-      className="mt-8 rounded-xl border bg-white p-5 text-zinc-900 shadow-sm"
+      className="mt-8 max-w-full min-w-0 overflow-hidden rounded-xl border bg-white p-4 text-zinc-900 shadow-sm sm:p-5"
       open={open}
       onToggle={onToggle}
     >
@@ -127,7 +127,7 @@ export function AdminMatchOddsEditor({ matches }: { matches: MatchRow[] }) {
           matches.map((match) => {
             const settled = Boolean(match.settledAt);
             return (
-              <details key={match.id} className="rounded-lg border border-zinc-200 p-4">
+              <details key={match.id} className="min-w-0 max-w-full rounded-lg border border-zinc-200 p-4">
                 <summary className="cursor-pointer list-none">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -145,7 +145,7 @@ export function AdminMatchOddsEditor({ matches }: { matches: MatchRow[] }) {
                   </div>
                 </summary>
 
-                <form className="mt-4" onSubmit={(event) => saveMatchOdds(event, match)}>
+                <form className="mt-4 min-w-0 max-w-full" onSubmit={(event) => saveMatchOdds(event, match)}>
                   <div className="flex justify-end">
                     <button
                       type="submit"
@@ -163,11 +163,11 @@ export function AdminMatchOddsEditor({ matches }: { matches: MatchRow[] }) {
 
                   <div className="mt-4 space-y-4">
                     {match.markets.map((market) => (
-                      <section key={market.id} className="rounded-md border border-zinc-100 bg-zinc-50 p-3">
+                      <section key={market.id} className="min-w-0 max-w-full rounded-md border border-zinc-100 bg-zinc-50 p-3">
                         <h4 className="font-medium text-zinc-900">{market.title}</h4>
-                        <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="mt-2 grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 lg:grid-cols-3">
                           {market.options.map((option) => (
-                            <label key={option.id} className="block rounded-md border border-zinc-200 bg-white p-2">
+                            <label key={option.id} className="block min-w-0 max-w-full rounded-md border border-zinc-200 bg-white p-2">
                               <span className="block text-xs font-medium text-zinc-700">
                                 {displayOutcomeLabel(market.type, option.outcome, match.homeTeam, match.awayTeam)}
                               </span>
@@ -184,7 +184,7 @@ export function AdminMatchOddsEditor({ matches }: { matches: MatchRow[] }) {
                                     [option.id]: event.target.value,
                                   }))
                                 }
-                                className="mt-1 w-full rounded-md border border-zinc-300 px-2 py-1 text-sm disabled:bg-zinc-100"
+                                className="mt-1 w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1 text-sm disabled:bg-zinc-100"
                               />
                             </label>
                           ))}

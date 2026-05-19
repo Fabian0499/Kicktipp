@@ -52,11 +52,11 @@ export default async function AdminPage() {
 
   return (
     <main
-      className="relative flex min-h-screen flex-1 items-start bg-cover bg-center bg-fixed bg-no-repeat"
+      className="relative flex min-h-screen flex-1 items-start overflow-x-hidden bg-cover bg-center bg-fixed bg-no-repeat"
       style={{ backgroundImage: "url('/kicktipp-bg-2026.png')" }}
     >
       <div className="absolute inset-0 bg-black/45" />
-      <div className="relative mx-auto w-full max-w-5xl px-6 py-10">
+      <div className="relative mx-auto w-full min-w-0 max-w-5xl overflow-x-hidden px-4 py-10 sm:px-6">
       <h1 className="text-3xl font-bold text-white">Verwaltung</h1>
       <p className="mt-2 text-white">
         Hier legst du Spiele an und hinterlegst Quoten für die wichtigsten Wettmärkte.

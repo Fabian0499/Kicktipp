@@ -206,7 +206,7 @@ export const en = {
     simpleTipSaveFailed: "Could not save Billo tip.",
     simpleTipSavedMessage: "Billo tip placed successfully.",
     loginRequired: "Please log in to place a bet.",
-    betSlip: "Bet slip",
+    betSlip: "Tip",
     close: "Close",
     slipEmpty: "No selection. Click an odds field.",
     placeBets: "Place bets",

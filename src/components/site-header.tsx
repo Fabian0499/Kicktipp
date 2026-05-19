@@ -18,7 +18,7 @@ type NavLinkItem = {
 
 function navLinkClass(active: boolean, mobile = false) {
   const base = mobile
-    ? "block rounded-md px-3 py-2.5 text-base"
+    ? "block rounded-md px-3 py-3 text-base"
     : "whitespace-nowrap text-base";
   return active
     ? `${base} font-semibold text-black`
@@ -39,9 +39,9 @@ export function SiteHeader() {
       { href: "/how-it-works", label: t("nav.howItWorks") },
       { href: "/rules", label: t("nav.rules") },
       { href: "/bets", label: t("nav.bets") },
+      { href: "/dashboard", label: t("nav.dashboard") },
       { href: "/wm-sieger-2026", label: t("nav.wmWinner") },
       { href: "/leaderboard", label: t("nav.leaderboard") },
-      { href: "/dashboard", label: t("nav.dashboard") },
     ],
     [t],
   );
@@ -118,8 +118,8 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="border-b border-black/10 bg-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-6 md:py-4">
+    <header className="relative z-30 border-b border-black/10 bg-white">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 lg:px-6 lg:py-4">
         <Link href="/" className="block shrink-0">
           <Image
             src="/kicktipp-logo.png"
@@ -127,17 +127,14 @@ export function SiteHeader() {
             width={130}
             height={50}
             priority
-            className="h-9 w-auto mix-blend-multiply md:h-[50px] md:w-[130px]"
+            className="h-9 w-auto mix-blend-multiply lg:h-[50px] lg:w-[130px]"
           />
         </Link>
 
-        <nav className="hidden items-center gap-3 lg:gap-4 md:flex" aria-label="Hauptnavigation">
+        <nav className="hidden items-center gap-3 lg:flex lg:gap-4" aria-label="Hauptnavigation">
           {renderNavLinks(visibleLinks)}
           {sessionUser?.role === "ADMIN" ? (
-            <Link
-              href="/admin"
-              className={navLinkClass(pathname === "/admin")}
-            >
+            <Link href="/admin" className={navLinkClass(pathname === "/admin")}>
               {t("nav.admin")}
             </Link>
           ) : null}
@@ -160,7 +157,7 @@ export function SiteHeader() {
           )}
         </nav>
 
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-2 lg:hidden">
           <LanguageSelect />
           <button
             type="button"
@@ -186,19 +183,35 @@ export function SiteHeader() {
       </div>
 
       {mobileOpen ? (
-        <>
-          <button
-            type="button"
-            aria-label={t("nav.menuClose")}
-            className="fixed inset-0 z-40 bg-black/30 md:hidden"
-            onClick={() => setMobileOpen(false)}
-          />
-          <nav
-            id="mobile-site-nav"
-            className="relative z-50 max-h-[calc(100dvh-4.5rem)] overflow-y-auto border-t border-zinc-200 bg-white px-4 py-3 shadow-lg md:hidden"
-            aria-label="Hauptnavigation"
-          >
-            <div className="flex flex-col gap-1">
+        <div
+          id="mobile-site-nav"
+          className="fixed inset-0 z-50 flex flex-col bg-white lg:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Hauptnavigation"
+        >
+          <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+            <Link href="/" className="block shrink-0" onClick={() => setMobileOpen(false)}>
+              <Image
+                src="/kicktipp-logo.png"
+                alt={t("nav.logoAlt")}
+                width={130}
+                height={50}
+                className="h-9 w-auto mix-blend-multiply"
+              />
+            </Link>
+            <button
+              type="button"
+              aria-label={t("nav.menuClose")}
+              onClick={() => setMobileOpen(false)}
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-md border border-zinc-300 text-xl font-medium text-black"
+            >
+              ×
+            </button>
+          </div>
+
+          <nav className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-2">
+            <div className="flex flex-col gap-0.5">
               {renderNavLinks(visibleLinks, true)}
               {sessionUser?.role === "ADMIN" ? (
                 <Link
@@ -210,27 +223,28 @@ export function SiteHeader() {
                 </Link>
               ) : null}
             </div>
-            <div className="mt-3 border-t border-zinc-200 pt-3">
-              {isAuthenticated ? (
-                <button
-                  type="button"
-                  onClick={() => void handleLogout()}
-                  className="w-full cursor-pointer rounded-md border px-3 py-2.5 text-base font-medium text-black"
-                >
-                  {t("nav.logout")}
-                </button>
-              ) : (
-                <Link
-                  href="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="block rounded-md border px-3 py-2.5 text-center text-base font-medium text-black"
-                >
-                  {t("nav.login")}
-                </Link>
-              )}
-            </div>
           </nav>
-        </>
+
+          <div className="shrink-0 border-t border-zinc-200 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {isAuthenticated ? (
+              <button
+                type="button"
+                onClick={() => void handleLogout()}
+                className="w-full cursor-pointer rounded-md border px-3 py-3 text-base font-medium text-black"
+              >
+                {t("nav.logout")}
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+                className="block rounded-md border px-3 py-3 text-center text-base font-medium text-black"
+              >
+                {t("nav.login")}
+              </Link>
+            )}
+          </div>
+        </div>
       ) : null}
     </header>
   );

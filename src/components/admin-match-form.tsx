@@ -198,14 +198,14 @@ export function AdminMatchForm() {
 
   return (
     <details
-      className="mt-8 rounded-xl border bg-white p-5 text-zinc-900 shadow-sm"
+      className="mt-8 max-w-full min-w-0 overflow-hidden rounded-xl border bg-white p-4 text-zinc-900 shadow-sm sm:p-5"
       open={detailsOpen}
       onToggle={onDetailsToggle}
     >
       <summary className="cursor-pointer text-xl font-semibold text-zinc-900">
         Neues Spiel eintragen
       </summary>
-      <form className="mt-4 space-y-5 text-zinc-900" onSubmit={onSubmit}>
+      <form className="mt-4 min-w-0 max-w-full space-y-5 text-zinc-900" onSubmit={onSubmit}>
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="block text-sm font-medium">Heimteam</label>
@@ -292,7 +292,7 @@ export function AdminMatchForm() {
       </div>
 
       {isKnockout ? (
-        <fieldset className="rounded-md border p-3">
+        <fieldset className="min-w-0 rounded-md border p-3">
           <legend className="px-2 text-sm font-semibold">Methode des Sieges</legend>
           <p className="text-xs text-zinc-600">
             Vier Quoten: Sieg in der Verlängerung bzw. nach Elfmeterschießen je Heim- und Gastmannschaft. Bei der
@@ -356,32 +356,32 @@ export function AdminMatchForm() {
         </fieldset>
       ) : null}
 
-      <div className="grid gap-5 md:grid-cols-2">
-        <fieldset className="rounded-md border p-3">
+      <div className="grid min-w-0 gap-5 md:grid-cols-2">
+        <fieldset className="min-w-0 rounded-md border p-3">
           <legend className="px-2 text-sm font-semibold">1X2</legend>
           <div className="mt-2 grid gap-2">
-            <input name="odd1" type="number" step="0.01" min="1.01" placeholder="Quote 1" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddX" type="number" step="0.01" min="1.01" placeholder="Quote X" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="odd2" type="number" step="0.01" min="1.01" placeholder="Quote 2" required className="rounded-md border border-zinc-300 px-3 py-2" />
+            <input name="odd1" type="number" step="0.01" min="1.01" placeholder="Quote 1" required className="w-full min-w-0 rounded-md border border-zinc-300 px-3 py-2" />
+            <input name="oddX" type="number" step="0.01" min="1.01" placeholder="Quote X" required className="w-full min-w-0 rounded-md border border-zinc-300 px-3 py-2" />
+            <input name="odd2" type="number" step="0.01" min="1.01" placeholder="Quote 2" required className="w-full min-w-0 rounded-md border border-zinc-300 px-3 py-2" />
           </div>
         </fieldset>
 
-        <fieldset className="rounded-md border p-3">
+        <fieldset className="min-w-0 rounded-md border p-3">
           <legend className="px-2 text-sm font-semibold">Halbzeit / Endstand</legend>
-          <div className="mt-2 grid gap-2 md:grid-cols-3">
-            <input name="oddHtFt11" type="number" step="0.01" min="1.01" placeholder="1/1" required className="rounded-md border border-zinc-300 px-3 py-2" />
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <input name="oddHtFt11" type="number" step="0.01" min="1.01" placeholder="1/1" required className="w-full min-w-0 rounded-md border border-zinc-300 px-3 py-2" />
             <input name="oddHtFt1X" type="number" step="0.01" min="1.01" placeholder="1/X" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddHtFt12" type="number" step="0.01" min="1.01" placeholder="1/2" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddHtFtX1" type="number" step="0.01" min="1.01" placeholder="X/1" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddHtFtXX" type="number" step="0.01" min="1.01" placeholder="X/X" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddHtFtX2" type="number" step="0.01" min="1.01" placeholder="X/2" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddHtFt21" type="number" step="0.01" min="1.01" placeholder="2/1" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddHtFt2X" type="number" step="0.01" min="1.01" placeholder="2/X" required className="rounded-md border border-zinc-300 px-3 py-2" />
-            <input name="oddHtFt22" type="number" step="0.01" min="1.01" placeholder="2/2" required className="rounded-md border border-zinc-300 px-3 py-2" />
+            <input name="oddHtFt12" type="number" step="0.01" min="1.01" placeholder="1/2" required className="w-full min-w-0 rounded-md border border-zinc-300 px-3 py-2" />
+            <input name="oddHtFtX1" type="number" step="0.01" min="1.01" placeholder="X/1" required className="w-full min-w-0 rounded-md border border-zinc-300 px-3 py-2" />
+            <input name="oddHtFtXX" type="number" step="0.01" min="1.01" placeholder="X/X" required className="w-full min-w-0 rounded-md border border-zinc-300 px-3 py-2" />
+            <input name="oddHtFtX2" type="number" step="0.01" min="1.01" placeholder="X/2" required className="w-full min-w-0 rounded-md border border-zinc-300 px-3 py-2" />
+            <input name="oddHtFt21" type="number" step="0.01" min="1.01" placeholder="2/1" required className="w-full min-w-0 rounded-md border border-zinc-300 px-3 py-2" />
+            <input name="oddHtFt2X" type="number" step="0.01" min="1.01" placeholder="2/X" required className="w-full min-w-0 rounded-md border border-zinc-300 px-3 py-2" />
+            <input name="oddHtFt22" type="number" step="0.01" min="1.01" placeholder="2/2" required className="w-full min-w-0 rounded-md border border-zinc-300 px-3 py-2" />
           </div>
         </fieldset>
 
-        <fieldset className="rounded-md border p-3 md:col-span-2">
+        <fieldset className="min-w-0 rounded-md border p-3 md:col-span-2">
           <legend className="px-2 text-sm font-semibold">Exact Score</legend>
           <p className="mb-3 text-xs text-zinc-600">
             Drei Spalten: Heimsiege, Unentschieden, Auswärtssiege (Format <strong>Heim : Gast</strong>).
@@ -449,7 +449,7 @@ export function AdminMatchForm() {
           </div>
         </fieldset>
 
-        <fieldset className="rounded-lg border-2 border-zinc-400 bg-zinc-50/70 p-4 md:col-span-2">
+        <fieldset className="min-w-0 rounded-lg border-2 border-zinc-400 bg-zinc-50/70 p-4 md:col-span-2">
           <legend className="px-2 text-base font-semibold text-zinc-900">Über / Unter Tore</legend>
           <p className="mb-4 text-xs text-zinc-600">
             Gesamttore (Regelzeit) – pro Zeile getrennte Quoten für Unter, Exakt und Über.
@@ -492,8 +492,8 @@ export function AdminMatchForm() {
               />
             </div>
           </div>
-          <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
-            <table className="w-full min-w-[32rem] border-collapse text-sm">
+          <div className="max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-zinc-200 bg-white">
+            <table className="w-full min-w-[20rem] border-collapse text-sm sm:min-w-[28rem]">
               <thead>
                 <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
                   <th className="px-3 py-2 font-semibold text-zinc-800">Tore</th>
@@ -509,13 +509,13 @@ export function AdminMatchForm() {
                     <tr key={i} className="border-b border-zinc-100">
                       <td className="whitespace-nowrap px-3 py-2 font-medium tabular-nums text-zinc-900">{n}</td>
                       <td className="px-2 py-1.5">
-                        <input name={`oddGoalsU${i}`} type="number" step="0.01" min="1.01" max={1000} required placeholder="Quote" className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5" />
+                        <input name={`oddGoalsU${i}`} type="number" step="0.01" min="1.01" max={1000} required placeholder="Quote" className="w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1.5" />
                       </td>
                       <td className="px-2 py-1.5">
-                        <input name={`oddGoalsE${i}`} type="number" step="0.01" min="1.01" max={1000} required placeholder="Quote" className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5" />
+                        <input name={`oddGoalsE${i}`} type="number" step="0.01" min="1.01" max={1000} required placeholder="Quote" className="w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1.5" />
                       </td>
                       <td className="px-2 py-1.5">
-                        <input name={`oddGoalsO${i}`} type="number" step="0.01" min="1.01" max={1000} required placeholder="Quote" className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5" />
+                        <input name={`oddGoalsO${i}`} type="number" step="0.01" min="1.01" max={1000} required placeholder="Quote" className="w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1.5" />
                       </td>
                     </tr>
                   );
@@ -525,7 +525,7 @@ export function AdminMatchForm() {
           </div>
         </fieldset>
 
-        <fieldset className="rounded-md border p-3">
+        <fieldset className="min-w-0 rounded-md border p-3">
           <legend className="px-2 text-sm font-semibold">Beide Teams treffen</legend>
           <div className="mt-2 grid gap-2">
             <input name="oddBttsYes" type="number" step="0.01" min="1.01" placeholder="Quote Ja" required className="rounded-md border border-zinc-300 px-3 py-2" />
@@ -533,7 +533,7 @@ export function AdminMatchForm() {
           </div>
         </fieldset>
 
-        <fieldset className="rounded-md border p-4 md:col-span-2">
+        <fieldset className="min-w-0 rounded-md border p-4 md:col-span-2">
           <legend className="px-2 text-base font-semibold text-zinc-900">Handicap</legend>
           <p className="mb-3 text-xs text-zinc-600">
             Vorteil für die Heimmannschaft (<strong>1:0</strong>, <strong>2:0</strong> …) und für die Auswärtsmannschaft
@@ -584,8 +584,8 @@ export function AdminMatchForm() {
               <p className="mt-1 text-[11px] text-zinc-500">0:1 bis 0:{handicapAwayRowCount}</p>
             </div>
           </div>
-          <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
-            <table className="w-full min-w-[32rem] border-collapse text-sm">
+          <div className="max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-zinc-200 bg-white">
+            <table className="w-full min-w-[20rem] border-collapse text-sm sm:min-w-[28rem]">
               <thead>
                 <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
                   <th className="px-3 py-2 font-semibold text-black">Handicap</th>
@@ -623,7 +623,7 @@ export function AdminMatchForm() {
                           max={1000}
                           required
                           placeholder="Quote"
-                          className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5"
+                          className="w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1.5"
                         />
                       </td>
                       <td className="px-2 py-1.5">
@@ -635,7 +635,7 @@ export function AdminMatchForm() {
                           max={1000}
                           required
                           placeholder="Quote"
-                          className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5"
+                          className="w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1.5"
                         />
                       </td>
                       <td className="px-2 py-1.5">
@@ -647,7 +647,7 @@ export function AdminMatchForm() {
                           max={1000}
                           required
                           placeholder="Quote"
-                          className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5"
+                          className="w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1.5"
                         />
                       </td>
                     </tr>
@@ -658,7 +658,7 @@ export function AdminMatchForm() {
           </div>
         </fieldset>
 
-        <fieldset className="rounded-md border p-4 md:col-span-2">
+        <fieldset className="min-w-0 rounded-md border p-4 md:col-span-2">
           <legend className="px-2 text-base font-semibold text-zinc-900">Kort</legend>
           <p className="mb-3 text-xs text-zinc-600">
             Gesamtzahl Kort (nach eurer Zählregel). Pro Zeile gilt die Schwelle <strong>N</strong>. Nur wenn die
@@ -705,8 +705,8 @@ export function AdminMatchForm() {
               <p className="mt-1 text-[11px] text-zinc-500">1–15</p>
             </div>
           </div>
-          <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
-            <table className="w-full min-w-[32rem] border-collapse text-sm">
+          <div className="max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-zinc-200 bg-white">
+            <table className="w-full min-w-[20rem] border-collapse text-sm sm:min-w-[28rem]">
               <thead>
                 <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
                   <th className="px-3 py-2 font-semibold text-zinc-800">Schwelle N</th>
@@ -733,7 +733,7 @@ export function AdminMatchForm() {
                             max={1000}
                             required
                             placeholder="Quote"
-                            className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5"
+                            className="w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1.5"
                           />
                         )}
                       </td>
@@ -746,7 +746,7 @@ export function AdminMatchForm() {
                           max={1000}
                           required
                           placeholder="Quote"
-                          className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5"
+                          className="w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1.5"
                         />
                       </td>
                       <td className="px-2 py-1.5">
@@ -758,7 +758,7 @@ export function AdminMatchForm() {
                           max={1000}
                           required
                           placeholder="Quote"
-                          className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5"
+                          className="w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1.5"
                         />
                       </td>
                     </tr>
@@ -769,7 +769,7 @@ export function AdminMatchForm() {
           </div>
         </fieldset>
 
-        <fieldset className="rounded-md border p-4 md:col-span-2">
+        <fieldset className="min-w-0 rounded-md border p-4 md:col-span-2">
           <legend className="px-2 text-base font-semibold text-zinc-900">Hjornespark</legend>
           <p className="mb-3 text-xs text-zinc-600">
             Gesamtzahl Hjornespark (nach eurer Zählregel). Pro Zeile gilt die Schwelle <strong>N</strong> (Unter /
@@ -817,8 +817,8 @@ export function AdminMatchForm() {
               <p className="mt-1 text-[11px] text-zinc-500">1–15</p>
             </div>
           </div>
-          <div className="overflow-x-auto rounded-md border border-zinc-200 bg-white">
-            <table className="w-full min-w-[32rem] border-collapse text-sm">
+          <div className="max-w-full overflow-x-auto overscroll-x-contain rounded-md border border-zinc-200 bg-white">
+            <table className="w-full min-w-[20rem] border-collapse text-sm sm:min-w-[28rem]">
               <thead>
                 <tr className="border-b border-zinc-200 bg-zinc-50 text-left">
                   <th className="px-3 py-2 font-semibold text-zinc-800">Schwelle N</th>
@@ -845,7 +845,7 @@ export function AdminMatchForm() {
                             max={1000}
                             required
                             placeholder="Quote"
-                            className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5"
+                            className="w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1.5"
                           />
                         )}
                       </td>
@@ -858,7 +858,7 @@ export function AdminMatchForm() {
                           max={1000}
                           required
                           placeholder="Quote"
-                          className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5"
+                          className="w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1.5"
                         />
                       </td>
                       <td className="px-2 py-1.5">
@@ -870,7 +870,7 @@ export function AdminMatchForm() {
                           max={1000}
                           required
                           placeholder="Quote"
-                          className="w-full min-w-[5rem] rounded-md border border-zinc-300 px-2 py-1.5"
+                          className="w-full min-w-0 max-w-full rounded-md border border-zinc-300 px-2 py-1.5"
                         />
                       </td>
                     </tr>
