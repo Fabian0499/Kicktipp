@@ -46,8 +46,6 @@ const LEAGUE_MATCH_BET_BUDGET = 100;
 const KO_MATCH_BET_BUDGET = 200;
 const LEAGUE_MAX_PAYOUT_PER_BET = 400;
 const KO_MAX_PAYOUT_PER_BET = 600;
-const LEAGUE_MAX_PAYOUT_PER_MATCH = 600;
-const KO_MAX_PAYOUT_PER_MATCH = 900;
 const BETS_VARIANT_STORAGE_KEY = "kicktipp-bets-variant";
 
 const COUNTRY_FLAG_ISO: Record<string, string> = {
@@ -314,7 +312,6 @@ export function BetsBoard({
     [selections],
   );
   const maxPayoutPerBet = selectedMatch?.isKnockout ? KO_MAX_PAYOUT_PER_BET : LEAGUE_MAX_PAYOUT_PER_BET;
-  const maxPayoutPerMatch = selectedMatch?.isKnockout ? KO_MAX_PAYOUT_PER_MATCH : LEAGUE_MAX_PAYOUT_PER_MATCH;
   const maxStakeByPerBetCap = useMemo(() => {
     if (!Number.isFinite(combinedOdds) || combinedOdds <= 0) {
       return 0;
@@ -1879,74 +1876,6 @@ export function BetsBoard({
           >
             {saving ? t("bets.savingBet") : t("bets.confirmStake")}
           </button>
-          <section
-            className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50/90 px-4 py-3 text-zinc-800"
-            aria-label="Regeln und Limits"
-          >
-            <h4 className="border-b border-zinc-200 pb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              Limits & Regeln
-            </h4>
-            <dl className="mt-3 space-y-0 text-sm">
-              <div className="flex items-baseline justify-between gap-4 border-b border-zinc-100 py-2 first:pt-0">
-                <dt className="text-zinc-600">Spielbudget</dt>
-                <dd className="shrink-0 tabular-nums font-medium text-zinc-900">
-                  {selectedMatch?.isKnockout ? KO_MATCH_BET_BUDGET : LEAGUE_MATCH_BET_BUDGET}{" "}
-                  <span className="font-normal text-zinc-500">P.</span>
-                </dd>
-              </div>
-              <div className="flex items-baseline justify-between gap-4 border-b border-zinc-100 py-2">
-                <dt className="text-zinc-600">Gewinn max. pro Tipp</dt>
-                <dd className="shrink-0 tabular-nums font-medium text-zinc-900">
-                  {maxPayoutPerBet} <span className="font-normal text-zinc-500">P.</span>
-                </dd>
-              </div>
-              <div className="flex items-baseline justify-between gap-4 py-2">
-                <dt className="text-zinc-600">Gewinn max. pro Spiel</dt>
-                <dd className="shrink-0 tabular-nums font-medium text-zinc-900">
-                  {maxPayoutPerMatch} <span className="font-normal text-zinc-500">P.</span>
-                </dd>
-              </div>
-            </dl>
-            <p className="mt-1 text-[11px] leading-snug text-zinc-500">
-              Ungenutztes Spielbudget verfällt.
-            </p>
-            <ul className="mt-4 space-y-2 border-t border-zinc-200 pt-3 text-xs leading-relaxed text-zinc-700">
-              <li className="flex gap-2">
-                <span className="mt-0.5 shrink-0 text-zinc-400" aria-hidden>
-                  –
-                </span>
-                <span>
-                  Quoten {"<="} {MIN_BETTABLE_ODDS.toFixed(2).replace(".", ",")} sind gesperrt (Ausnahme: Markt{" "}
-                  <strong>1X2</strong> – dort sind alle Quoten wählbar).
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-0.5 shrink-0 text-zinc-400" aria-hidden>
-                  –
-                </span>
-                <span>Nur Einzelwetten (keine Kombis).</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-0.5 shrink-0 text-zinc-400" aria-hidden>
-                  –
-                </span>
-                <span>
-                  Profi: Beliebig viele Einzelwetten pro Spiel, solange noch Spielbudget übrig ist; die Summe aller
-                  Einsätze darf das Budget nicht überschreiten.
-                </span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-0.5 shrink-0 text-zinc-400" aria-hidden>
-                  –
-                </span>
-                <span className="text-zinc-600">
-                  Keine vollständige Absicherung: Kombinationen aus offenen Tipps im selben Spiel, die jedes mögliche
-                  Ergebnis abdecken würden (z.&nbsp;B. Über/Unter dieselbe Linie, oder alle drei 1X2-Ausgänge gleichzeitig),
-                  sind nicht erlaubt.
-                </span>
-              </li>
-            </ul>
-          </section>
         </form>
       </aside>
     </>

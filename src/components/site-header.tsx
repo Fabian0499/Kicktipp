@@ -124,10 +124,10 @@ export function SiteHeader() {
           <Image
             src="/kicktipp-logo.png"
             alt={t("nav.logoAlt")}
-            width={130}
-            height={50}
+            width={998}
+            height={583}
             priority
-            className="h-9 w-auto mix-blend-multiply lg:h-[50px] lg:w-[130px]"
+            className="h-9 w-auto max-h-9 object-contain object-left mix-blend-multiply lg:h-[50px] lg:max-h-[50px] lg:w-auto"
           />
         </Link>
 
@@ -195,9 +195,9 @@ export function SiteHeader() {
               <Image
                 src="/kicktipp-logo.png"
                 alt={t("nav.logoAlt")}
-                width={130}
-                height={50}
-                className="h-9 w-auto mix-blend-multiply"
+                width={998}
+                height={583}
+                className="h-9 w-auto max-h-9 object-contain object-left mix-blend-multiply"
               />
             </Link>
             <button
