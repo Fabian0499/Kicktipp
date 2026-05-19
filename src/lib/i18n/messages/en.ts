@@ -15,6 +15,8 @@ export const en = {
     login: "Login",
     logout: "Logout",
     logoAlt: "Kicktipp logo",
+    menuOpen: "Open menu",
+    menuClose: "Close menu",
   },
   language: {
     de: "German",
