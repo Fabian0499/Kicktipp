@@ -2,6 +2,15 @@ import { z } from "zod";
 import { EXACT_SCORE_ORDERED_OUTCOMES } from "@/lib/exact-score";
 import { WORLD_CUP_GROUP_CODES } from "@/lib/world-cup-groups";
 
+const passwordSchema = z
+  .string()
+  .min(8, "Mindestens 8 Zeichen erforderlich.")
+  .max(128)
+  .regex(
+    /^[a-zA-Z0-9]+$/,
+    "Nur Buchstaben und Zahlen erlaubt (mindestens 8 Zeichen).",
+  );
+
 export const registerSchema = z.object({
   email: z.email().toLowerCase(),
   username: z
@@ -10,13 +19,7 @@ export const registerSchema = z.object({
     .min(3)
     .max(24)
     .regex(/^[a-zA-Z0-9_ ]+$/, "Nur Buchstaben, Zahlen, Leerzeichen und Unterstrich erlaubt."),
-  password: z
-    .string()
-    .min(8)
-    .max(128)
-    .regex(/[A-Z]/, "Mindestens ein Großbuchstabe erforderlich.")
-    .regex(/[a-z]/, "Mindestens ein Kleinbuchstabe erforderlich.")
-    .regex(/[0-9]/, "Mindestens eine Zahl erforderlich."),
+  password: passwordSchema,
 });
 
 export const loginSchema = z.object({
@@ -30,13 +33,7 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(16),
-  password: z
-    .string()
-    .min(8)
-    .max(128)
-    .regex(/[A-Z]/, "Mindestens ein Großbuchstabe erforderlich.")
-    .regex(/[a-z]/, "Mindestens ein Kleinbuchstabe erforderlich.")
-    .regex(/[0-9]/, "Mindestens eine Zahl erforderlich."),
+  password: passwordSchema,
 });
 
 const oddValue = z.coerce.number().positive().max(1000);
