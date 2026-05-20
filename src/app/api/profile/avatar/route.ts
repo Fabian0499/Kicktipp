@@ -1,7 +1,5 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { NextResponse } from "next/server";
+import { deleteAvatarFile, saveAvatarFile } from "@/lib/avatar-storage";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -40,27 +38,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nicht unterstütztes Bildformat." }, { status: 400 });
   }
 
-  const uploadDirectory = path.join(process.cwd(), "public", "uploads", "avatars");
-  await mkdir(uploadDirectory, { recursive: true });
+  try {
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    const publicAvatarUrl = await saveAvatarFile(
+      currentUser.id,
+      extension,
+      fileBuffer,
+      file.type,
+    );
 
-  const filename = `${currentUser.id}-${randomUUID()}.${extension}`;
-  const absoluteTargetPath = path.join(uploadDirectory, filename);
-  const publicAvatarUrl = `/uploads/avatars/${filename}`;
+    const oldAvatarUrl = currentUser.avatarUrl;
+    await db.user.update({
+      where: { id: currentUser.id },
+      data: { avatarUrl: publicAvatarUrl },
+    });
 
-  const fileBuffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(absoluteTargetPath, fileBuffer);
+    await deleteAvatarFile(oldAvatarUrl);
 
-  const oldAvatarUrl = currentUser.avatarUrl;
-  await db.user.update({
-    where: { id: currentUser.id },
-    data: { avatarUrl: publicAvatarUrl },
-  });
-
-  if (oldAvatarUrl?.startsWith("/uploads/avatars/")) {
-    const oldFilename = oldAvatarUrl.replace("/uploads/avatars/", "");
-    const oldAbsolutePath = path.join(uploadDirectory, oldFilename);
-    await unlink(oldAbsolutePath).catch(() => undefined);
+    return NextResponse.json({ ok: true, avatarUrl: publicAvatarUrl });
+  } catch {
+    return NextResponse.json(
+      { error: "Profilbild konnte nicht gespeichert werden." },
+      { status: 500 },
+    );
   }
-
-  return NextResponse.json({ ok: true, avatarUrl: publicAvatarUrl });
 }
