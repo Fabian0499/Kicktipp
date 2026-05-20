@@ -2,14 +2,7 @@ import { z } from "zod";
 import { EXACT_SCORE_ORDERED_OUTCOMES } from "@/lib/exact-score";
 import { WORLD_CUP_GROUP_CODES } from "@/lib/world-cup-groups";
 
-const passwordSchema = z
-  .string()
-  .min(8, "Mindestens 8 Zeichen erforderlich.")
-  .max(128)
-  .regex(
-    /^[a-zA-Z0-9]+$/,
-    "Nur Buchstaben und Zahlen erlaubt (mindestens 8 Zeichen).",
-  );
+const passwordSchema = z.string().min(1, "Passwort erforderlich.").max(128);
 
 export const registerSchema = z.object({
   email: z.email().toLowerCase(),
@@ -24,7 +17,7 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   email: z.email().toLowerCase(),
-  password: z.string().min(8).max(128),
+  password: passwordSchema,
 });
 
 export const forgotPasswordSchema = z.object({
