@@ -1,6 +1,6 @@
 export const en = {
   meta: {
-    title: "Kicktipp Platform",
+    title: "Tippspiel",
     description: "Modern tipping platform with user accounts and a points system.",
   },
   nav: {
