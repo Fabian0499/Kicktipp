@@ -17,7 +17,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ match
   const body = await request.json().catch(() => null);
   const parsed = adminUpdateMatchOddsSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Ungültige Quoten." }, { status: 400 });
+    return NextResponse.json({ error: "Ungültige Eingaben." }, { status: 400 });
   }
 
   const match = await db.match.findUnique({
@@ -50,6 +50,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ match
     }
   }
 
+  const newStartsAt = new Date(parsed.data.startsAt);
+  const startsAtChanged = match.startsAt.getTime() !== newStartsAt.getTime();
+
   const changedOptions = parsed.data.options.filter((option) => currentOddsByOptionId.get(option.id) !== option.odds);
   for (const option of changedOptions) {
     await db.marketOption.update({
@@ -58,5 +61,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ match
     });
   }
 
-  return NextResponse.json({ ok: true, updatedCount: changedOptions.length });
+  if (startsAtChanged) {
+    await db.match.update({
+      where: { id: matchId },
+      data: { startsAt: newStartsAt },
+    });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    updatedOddsCount: changedOptions.length,
+    startsAtUpdated: startsAtChanged,
+  });
 }

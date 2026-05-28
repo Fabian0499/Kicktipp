@@ -10,6 +10,12 @@ import { usePersistedDetailsOpen } from "@/hooks/use-persisted-details-open";
 
 const STORAGE_KEY = "kicktipp-admin-match-odds-editor-open";
 
+function toDatetimeLocalValue(iso: string) {
+  const date = new Date(iso);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 type OptionRow = {
   id: string;
   outcome: string;
@@ -71,6 +77,9 @@ export function AdminMatchOddsEditor({ matches }: { matches: MatchRow[] }) {
       ),
     ),
   );
+  const [startsAtByMatchId, setStartsAtByMatchId] = useState<Record<string, string>>(() =>
+    Object.fromEntries(matches.map((match) => [match.id, toDatetimeLocalValue(match.startsAt)])),
+  );
   const [savingMatchId, setSavingMatchId] = useState<string | null>(null);
   const [successMatchId, setSuccessMatchId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -87,10 +96,18 @@ export function AdminMatchOddsEditor({ matches }: { matches: MatchRow[] }) {
     setError("");
 
     const optionIds = matchOptionIds.get(match.id) ?? [];
+    const startsAtLocal = startsAtByMatchId[match.id];
+    if (!startsAtLocal) {
+      setError("Bitte ein gültiges Anstoßdatum angeben.");
+      setSavingMatchId(null);
+      return;
+    }
+
     const response = await fetch(`/api/admin/matches/${match.id}/odds`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        startsAt: new Date(startsAtLocal).toISOString(),
         options: optionIds.map((id) => ({
           id,
           odds: Number(oddsById[id]),
@@ -101,7 +118,7 @@ export function AdminMatchOddsEditor({ matches }: { matches: MatchRow[] }) {
     setSavingMatchId(null);
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Quoten konnten nicht gespeichert werden.");
+      setError(body?.error ?? "Änderungen konnten nicht gespeichert werden.");
       return;
     }
 
@@ -114,9 +131,10 @@ export function AdminMatchOddsEditor({ matches }: { matches: MatchRow[] }) {
       open={open}
       onToggle={onToggle}
     >
-      <summary className="cursor-pointer text-xl font-semibold text-zinc-900">Bestehende Quoten bearbeiten</summary>
+      <summary className="cursor-pointer text-xl font-semibold text-zinc-900">Bestehende Spiele bearbeiten</summary>
       <p className="mt-2 text-sm text-zinc-600">
-        Änderungen gelten nur für neue Tipps. Bereits abgegebene Wetten behalten ihre gespeicherte Quote.
+        Anstoßzeit und Quoten anpassbar. Quotenänderungen gelten nur für neue Tipps; bestehende Wetten behalten ihre
+        gespeicherte Quote.
       </p>
 
       {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
@@ -135,7 +153,8 @@ export function AdminMatchOddsEditor({ matches }: { matches: MatchRow[] }) {
                         {match.homeTeam} vs. {match.awayTeam}
                       </h3>
                       <p className="text-sm text-zinc-600">
-                        Anstoß: {new Date(match.startsAt).toLocaleString("de-DE")}
+                        Anstoß:{" "}
+                        {new Date(startsAtByMatchId[match.id] ?? match.startsAt).toLocaleString("de-DE")}
                       </p>
                       {settled ? (
                         <p className="text-xs font-medium text-amber-700">Bereits ausgewertet – Quoten gesperrt.</p>
@@ -146,18 +165,34 @@ export function AdminMatchOddsEditor({ matches }: { matches: MatchRow[] }) {
                 </summary>
 
                 <form className="mt-4 min-w-0 max-w-full" onSubmit={(event) => saveMatchOdds(event, match)}>
-                  <div className="flex justify-end">
+                  <div className="flex flex-wrap items-end justify-between gap-3">
+                    <label className="block min-w-[min(100%,16rem)]">
+                      <span className="text-sm font-medium text-zinc-900">Anstoß (Datum & Uhrzeit)</span>
+                      <input
+                        type="datetime-local"
+                        required
+                        disabled={settled}
+                        value={startsAtByMatchId[match.id] ?? ""}
+                        onChange={(event) =>
+                          setStartsAtByMatchId((current) => ({
+                            ...current,
+                            [match.id]: event.target.value,
+                          }))
+                        }
+                        className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm disabled:bg-zinc-100"
+                      />
+                    </label>
                     <button
                       type="submit"
                       disabled={settled || savingMatchId === match.id}
                       className="cursor-pointer rounded-md bg-black px-3 py-1.5 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {savingMatchId === match.id ? "Speichert..." : "Quoten aktualisieren"}
+                      {savingMatchId === match.id ? "Speichert..." : "Speichern"}
                     </button>
                   </div>
                   {successMatchId === match.id ? (
                     <p className="mt-3 rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                      Quoten wurden erfolgreich aktualisiert.
+                      Anstoß und Quoten wurden gespeichert.
                     </p>
                   ) : null}
 

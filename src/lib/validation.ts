@@ -295,6 +295,7 @@ export const adminWmWinnerUpdateSchema = z.object({
 });
 
 export const adminUpdateMatchOddsSchema = z.object({
+  startsAt: z.iso.datetime(),
   options: z
     .array(
       z.object({
