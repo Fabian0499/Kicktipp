@@ -71,6 +71,10 @@ export default async function AdminPage() {
             awayTeam: match.awayTeam,
             startsAt: match.startsAt.toISOString(),
             settledAt: null,
+            cardsMatrixStart: match.cardsMatrixStart,
+            cardsMatrixRowCount: match.cardsMatrixRowCount,
+            cornersMatrixStart: match.cornersMatrixStart,
+            cornersMatrixRowCount: match.cornersMatrixRowCount,
             markets: match.markets.map((market) => ({
               id: market.id,
               type: market.type,

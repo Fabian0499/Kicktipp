@@ -294,6 +294,43 @@ export const adminWmWinnerUpdateSchema = z.object({
     .min(1),
 });
 
+const thresholdMatrixRowSchema = z.object({
+  unter: z.coerce.number().min(1.01).max(1000).optional(),
+  exakt: z.coerce.number().min(1.01).max(1000),
+  uber: z.coerce.number().min(1.01).max(1000),
+});
+
+const thresholdMatrixUpdateSchema = z
+  .object({
+    matrixStart: z.coerce.number().int().min(0).max(30),
+    matrixRowCount: z.coerce.number().int().min(1).max(15),
+    rows: z.array(thresholdMatrixRowSchema).min(1).max(15),
+  })
+  .refine((data) => data.rows.length === data.matrixRowCount, {
+    message: "Anzahl der Quotenzeilen muss zur eingetragenen Zeilenanzahl passen.",
+  })
+  .refine((data) => data.matrixStart + data.matrixRowCount - 1 <= 50, {
+    message: "Die höchste Schwelle (erste N + Anzahl Zeilen − 1) darf 50 nicht überschreiten.",
+  })
+  .refine(
+    (data) => {
+      for (let i = 0; i < data.rows.length; i += 1) {
+        const n = data.matrixStart + i;
+        if (n === 0) {
+          if (data.rows[i].unter !== undefined) {
+            return false;
+          }
+        } else if (data.rows[i].unter === undefined) {
+          return false;
+        }
+      }
+      return true;
+    },
+    {
+      message: "Bei Schwelle N = 0 entfällt „Unter“; bei N ≥ 1 sind Unter, Exakt und Über erforderlich.",
+    },
+  );
+
 export const adminUpdateMatchOddsSchema = z.object({
   startsAt: z.iso.datetime(),
   options: z
@@ -302,8 +339,9 @@ export const adminUpdateMatchOddsSchema = z.object({
         id: z.string().min(4),
         odds: z.coerce.number().min(1.01).max(1000),
       }),
-    )
-    .min(1),
+    ),
+  cardsMatrix: thresholdMatrixUpdateSchema.optional(),
+  cornersMatrix: thresholdMatrixUpdateSchema.optional(),
 });
 
 export const adminWmWinnerSettleSchema = z.object({

@@ -1,5 +1,6 @@
 import { UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { syncThresholdMatrixMarket, ThresholdMatrixSyncError } from "@/lib/admin-threshold-matrix-sync";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { adminUpdateMatchOddsSchema } from "@/lib/validation";
@@ -26,7 +27,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ match
       markets: {
         include: {
           options: {
-            select: { id: true, odds: true },
+            select: { id: true, odds: true, outcome: true },
           },
         },
       },
@@ -53,24 +54,63 @@ export async function PATCH(request: Request, context: { params: Promise<{ match
   const newStartsAt = new Date(parsed.data.startsAt);
   const startsAtChanged = match.startsAt.getTime() !== newStartsAt.getTime();
 
-  const changedOptions = parsed.data.options.filter((option) => currentOddsByOptionId.get(option.id) !== option.odds);
-  for (const option of changedOptions) {
-    await db.marketOption.update({
-      where: { id: option.id },
-      data: { odds: option.odds },
-    });
-  }
+  try {
+    await db.$transaction(async (tx) => {
+      const changedOptions = parsed.data.options.filter(
+        (option) => currentOddsByOptionId.get(option.id) !== option.odds,
+      );
+      for (const option of changedOptions) {
+        await tx.marketOption.update({
+          where: { id: option.id },
+          data: { odds: option.odds },
+        });
+      }
 
-  if (startsAtChanged) {
-    await db.match.update({
-      where: { id: matchId },
-      data: { startsAt: newStartsAt },
+      if (startsAtChanged) {
+        await tx.match.update({
+          where: { id: matchId },
+          data: { startsAt: newStartsAt },
+        });
+      }
+
+      if (parsed.data.cardsMatrix) {
+        await syncThresholdMatrixMarket(tx, {
+          matchId,
+          marketType: "CARDS_MATRIX",
+          prefix: "CARDS",
+          matrixStart: parsed.data.cardsMatrix.matrixStart,
+          matrixRowCount: parsed.data.cardsMatrix.matrixRowCount,
+          rows: parsed.data.cardsMatrix.rows,
+          matchStartField: "cardsMatrixStart",
+          matchRowCountField: "cardsMatrixRowCount",
+        });
+      }
+
+      if (parsed.data.cornersMatrix) {
+        await syncThresholdMatrixMarket(tx, {
+          matchId,
+          marketType: "CORNERS_MATRIX",
+          prefix: "CORNERS",
+          matrixStart: parsed.data.cornersMatrix.matrixStart,
+          matrixRowCount: parsed.data.cornersMatrix.matrixRowCount,
+          rows: parsed.data.cornersMatrix.rows,
+          matchStartField: "cornersMatrixStart",
+          matchRowCountField: "cornersMatrixRowCount",
+        });
+      }
     });
+  } catch (error) {
+    if (error instanceof ThresholdMatrixSyncError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    throw error;
   }
 
   return NextResponse.json({
     ok: true,
-    updatedOddsCount: changedOptions.length,
+    updatedOddsCount: parsed.data.options.filter(
+      (option) => currentOddsByOptionId.get(option.id) !== option.odds,
+    ).length,
     startsAtUpdated: startsAtChanged,
   });
 }
