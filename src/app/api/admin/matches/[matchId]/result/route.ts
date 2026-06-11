@@ -1,7 +1,7 @@
 import { MarketType, UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { db, interactiveTransactionOptions } from "@/lib/db";
 import {
   applyMatchSettlement,
   reverseMatchSettlement,
@@ -99,13 +99,15 @@ export async function POST(request: Request, context: { params: Promise<{ matchI
     }
 
     const input = buildSettlementInput(parsed.data);
-    const settledCount = await db.$transaction(async (tx) =>
-      applyMatchSettlement(
-        tx,
-        { id: match.id, homeTeam: match.homeTeam, awayTeam: match.awayTeam, isKnockout: match.isKnockout },
-        input,
-        usesQualifyMethodMatrix,
-      ),
+    const settledCount = await db.$transaction(
+      async (tx) =>
+        applyMatchSettlement(
+          tx,
+          { id: match.id, homeTeam: match.homeTeam, awayTeam: match.awayTeam, isKnockout: match.isKnockout },
+          input,
+          usesQualifyMethodMatrix,
+        ),
+      interactiveTransactionOptions,
     );
 
     return NextResponse.json({ ok: true, settledCount });
@@ -160,11 +162,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ match
       isKnockout: match.isKnockout,
     };
 
-    const result = await db.$transaction(async (tx) => {
-      const reversed = await reverseMatchSettlement(tx, matchCore);
-      const settledCount = await applyMatchSettlement(tx, matchCore, input, usesQualifyMethodMatrix);
-      return { ...reversed, settledCount };
-    });
+    const result = await db.$transaction(
+      async (tx) => {
+        const reversed = await reverseMatchSettlement(tx, matchCore);
+        const settledCount = await applyMatchSettlement(tx, matchCore, input, usesQualifyMethodMatrix);
+        return { ...reversed, settledCount };
+      },
+      interactiveTransactionOptions,
+    );
 
     return NextResponse.json({ ok: true, corrected: true, ...result });
   } catch (error) {

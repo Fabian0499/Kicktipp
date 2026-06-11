@@ -10,3 +10,9 @@ export const db =
 
 // Ein Client pro Serverless-Instanz (wichtig auf Vercel, sonst zu viele DB-Verbindungen).
 globalForPrisma.prisma = db;
+
+/** Für längere Admin-Auswertungen (viele Tipps pro Spiel). */
+export const interactiveTransactionOptions = {
+  maxWait: 10_000,
+  timeout: 120_000,
+};
