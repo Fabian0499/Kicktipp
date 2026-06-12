@@ -41,6 +41,7 @@ import { formatHalfTimeFullTimeDisplayLabel, formatOneXTwoDisplayLabel } from "@
 import { useLocale, useT } from "@/components/locale-provider";
 import { displayTeamName } from "@/lib/team-display-names";
 import { profiMarketCategoryKey } from "@/lib/profi-market-category";
+import { isMatchOpenForBetting } from "@/lib/match-betting";
 
 const LEAGUE_MATCH_BET_BUDGET = 100;
 const KO_MATCH_BET_BUDGET = 200;
@@ -390,6 +391,13 @@ export function BetsBoard({
     }
 
     const pending = selections[0];
+    if (pending) {
+      const pendingMatch = matches.find((entry) => entry.id === pending.matchId);
+      if (pendingMatch && !isMatchOpenForBetting({ startsAt: pendingMatch.startsAt })) {
+        setError(t("bets.tipsClosed"));
+        return;
+      }
+    }
     if (pending && isProfiOptionBlocked(pending.matchId, pending.marketType, pending.outcome)) {
       setError(
         "Diese Auswahl ist nicht möglich: Zusammen mit deinen bereits offenen Tipps im selben Spiel würdest du alle Ausgänge abdecken (Absicherung ist nicht erlaubt).",
@@ -466,6 +474,11 @@ export function BetsBoard({
   }
 
   function toggleSelection(selection: SelectedBet) {
+    const match = matches.find((entry) => entry.id === selection.matchId);
+    if (match && !isMatchOpenForBetting({ startsAt: match.startsAt })) {
+      setError(t("bets.tipsClosed"));
+      return;
+    }
     setError("");
     setMessage("");
     setSelections((current) => {
@@ -486,6 +499,10 @@ export function BetsBoard({
 
   async function placeSimpleTip(matchId: string) {
     const match = matches.find((entry) => entry.id === matchId);
+    if (match && !isMatchOpenForBetting({ startsAt: match.startsAt })) {
+      setError(t("bets.tipsClosed"));
+      return;
+    }
     const simpleTipTotalStake = match?.isKnockout ? 200 : 100;
     const totalBudget = allocatedBudgetByMatch[matchId] ?? (match?.isKnockout ? KO_MATCH_BET_BUDGET : LEAGUE_MATCH_BET_BUDGET);
     const remainingBudget = Math.max(0, totalBudget - (localUsedStakeByMatch[matchId] ?? 0));
@@ -595,6 +612,7 @@ export function BetsBoard({
             const simpleOneXTwoStake = match.isKnockout ? 140 : 80;
             const simpleExactStake = match.isKnockout ? 60 : 20;
             const simpleTotalStake = simpleOneXTwoStake + simpleExactStake;
+            const tipsClosed = !isMatchOpenForBetting({ startsAt: match.startsAt });
             const goalMarkets = match.markets.filter((market) => market.type.startsWith("OVER_UNDER_"));
             const goalsMatrixMarkets = match.markets.filter((market) => market.type === "GOALS_MATRIX");
             const halfTimeFullTimeMarkets = match.markets.filter(
@@ -708,6 +726,9 @@ export function BetsBoard({
                     {t("dashboard.kickoff")}:{" "}
                     {new Date(match.startsAt).toLocaleString(locale === "en" ? "en-GB" : "de-DE")}
                   </p>
+                  {tipsClosed ? (
+                    <p className="mt-2 text-sm font-medium text-amber-800">{t("bets.tipsClosed")}</p>
+                  ) : null}
                 </div>
                 {variant === "profi" ? (
                   <span className="text-sm font-medium text-zinc-600">
@@ -747,7 +768,7 @@ export function BetsBoard({
                           <input
                             type="number"
                             min={0}
-                            disabled={hasSimpleTip}
+                            disabled={hasSimpleTip || tipsClosed}
                             value={(simpleTipInputs[match.id]?.home ?? "")}
                             onChange={(event) =>
                               setSimpleTipInputs((current) => ({
@@ -781,7 +802,7 @@ export function BetsBoard({
                           <input
                             type="number"
                             min={0}
-                            disabled={hasSimpleTip}
+                            disabled={hasSimpleTip || tipsClosed}
                             value={(simpleTipInputs[match.id]?.away ?? "")}
                             onChange={(event) =>
                               setSimpleTipInputs((current) => ({
@@ -799,7 +820,7 @@ export function BetsBoard({
                         <button
                           type="button"
                           disabled={
-                            !isAuthenticated ||
+                            !isAuthenticated || tipsClosed ||
                             (simpleTipInputs[match.id]?.saving ?? false) ||
                             hasSimpleTip ||
                             !canPlaceSimpleTip ||
@@ -852,7 +873,7 @@ export function BetsBoard({
                                     key={option.id}
                                     type="button"
                                     disabled={
-                                      !isAuthenticated ||
+                                      !isAuthenticated || tipsClosed ||
                                       oddsViolateMinimumForMarket(market.type, option.odds) ||
                                       (pickBlocked && !isSelected)
                                     }
@@ -870,7 +891,7 @@ export function BetsBoard({
                                     className={`rounded-md border p-2 text-left ${
                                       isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
                                     } ${
-                                      isAuthenticated &&
+                                      isAuthenticated && !tipsClosed &&
                                       !oddsViolateMinimumForMarket(market.type, option.odds) &&
                                       (!pickBlocked || isSelected)
                                         ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
@@ -914,7 +935,7 @@ export function BetsBoard({
                               <button
                                 type="button"
                                 disabled={
-                                  !isAuthenticated ||
+                                  !isAuthenticated || tipsClosed ||
                                   oddsViolateMinimumForMarket(market.type, option.odds) ||
                                   (pickBlocked && !isSelected)
                                 }
@@ -932,7 +953,7 @@ export function BetsBoard({
                                 className={`w-full min-h-[3rem] rounded-md border px-2 py-1.5 text-left ${
                                   isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
                                 } ${
-                                  isAuthenticated &&
+                                  isAuthenticated && !tipsClosed &&
                                   !oddsViolateMinimumForMarket(market.type, option.odds) &&
                                   (!pickBlocked || isSelected)
                                     ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
@@ -1010,7 +1031,7 @@ export function BetsBoard({
                                     key={option.id}
                                     type="button"
                                     disabled={
-                                      !isAuthenticated ||
+                                      !isAuthenticated || tipsClosed ||
                                       oddsViolateMinimumForMarket(market.type, option.odds) ||
                                       (pickBlocked && !isSelected)
                                     }
@@ -1028,7 +1049,7 @@ export function BetsBoard({
                                     className={`rounded-md border p-2 text-left ${
                                       isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
                                     } ${
-                                      isAuthenticated &&
+                                      isAuthenticated && !tipsClosed &&
                                       !oddsViolateMinimumForMarket(market.type, option.odds) &&
                                       (!pickBlocked || isSelected)
                                         ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
@@ -1064,7 +1085,7 @@ export function BetsBoard({
                                     key={option.id}
                                     type="button"
                                     disabled={
-                                      !isAuthenticated ||
+                                      !isAuthenticated || tipsClosed ||
                                       oddsViolateMinimumForMarket(market.type, option.odds) ||
                                       (pickBlocked && !isSelected)
                                     }
@@ -1082,7 +1103,7 @@ export function BetsBoard({
                                     className={`rounded-md border p-2 text-left ${
                                       isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
                                     } ${
-                                      isAuthenticated &&
+                                      isAuthenticated && !tipsClosed &&
                                       !oddsViolateMinimumForMarket(market.type, option.odds) &&
                                       (!pickBlocked || isSelected)
                                         ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
@@ -1123,7 +1144,7 @@ export function BetsBoard({
                                     key={option.id}
                                     type="button"
                                     disabled={
-                                      !isAuthenticated ||
+                                      !isAuthenticated || tipsClosed ||
                                       oddsViolateMinimumForMarket(market.type, option.odds) ||
                                       (pickBlocked && !isSelected)
                                     }
@@ -1141,7 +1162,7 @@ export function BetsBoard({
                                     className={`rounded-md border p-2 text-left ${
                                       isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
                                     } ${
-                                      isAuthenticated &&
+                                      isAuthenticated && !tipsClosed &&
                                       !oddsViolateMinimumForMarket(market.type, option.odds) &&
                                       (!pickBlocked || isSelected)
                                         ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
@@ -1215,7 +1236,7 @@ export function BetsBoard({
                                             <button
                                               type="button"
                                               disabled={
-                                                !isAuthenticated ||
+                                                !isAuthenticated || tipsClosed ||
                                                 oddsViolateMinimumForMarket(market.type, option.odds) ||
                                                 (pickBlocked && !isSelected)
                                               }
@@ -1234,7 +1255,7 @@ export function BetsBoard({
                                               className={`w-full min-h-[3rem] rounded-md border px-2 py-1.5 text-left ${
                                                 isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
                                               } ${
-                                                isAuthenticated &&
+                                                isAuthenticated && !tipsClosed &&
                                                 !oddsViolateMinimumForMarket(market.type, option.odds) &&
                                                 (!pickBlocked || isSelected)
                                                   ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
@@ -1308,7 +1329,7 @@ export function BetsBoard({
                                             <button
                                               type="button"
                                               disabled={
-                                                !isAuthenticated ||
+                                                !isAuthenticated || tipsClosed ||
                                                 oddsViolateMinimumForMarket(market.type, option.odds) ||
                                                 (pickBlocked && !isSelected)
                                               }
@@ -1327,7 +1348,7 @@ export function BetsBoard({
                                               className={`w-full min-h-[3rem] rounded-md border px-2 py-1.5 text-left ${
                                                 isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
                                               } ${
-                                                isAuthenticated &&
+                                                isAuthenticated && !tipsClosed &&
                                                 !oddsViolateMinimumForMarket(market.type, option.odds) &&
                                                 (!pickBlocked || isSelected)
                                                   ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
@@ -1367,7 +1388,7 @@ export function BetsBoard({
                               key={option.id}
                               type="button"
                               disabled={
-                                !isAuthenticated ||
+                                !isAuthenticated || tipsClosed ||
                                 oddsViolateMinimumForMarket(market.type, option.odds) ||
                                 (pickBlocked && !isSelected)
                               }
@@ -1385,7 +1406,7 @@ export function BetsBoard({
                               className={`rounded-md border p-2 text-left ${
                                 isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-zinc-50"
                               } ${
-                                isAuthenticated &&
+                                isAuthenticated && !tipsClosed &&
                                 !oddsViolateMinimumForMarket(market.type, option.odds) &&
                                 (!pickBlocked || isSelected)
                                   ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
@@ -1451,7 +1472,7 @@ export function BetsBoard({
                                             <button
                                               type="button"
                                               disabled={
-                                                !isAuthenticated ||
+                                                !isAuthenticated || tipsClosed ||
                                                 oddsViolateMinimumForMarket(market.type, option.odds) ||
                                                 (pickBlocked && !isSelected)
                                               }
@@ -1470,7 +1491,7 @@ export function BetsBoard({
                                               className={`w-full min-h-[3rem] rounded-md border px-2 py-1.5 text-left ${
                                                 isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
                                               } ${
-                                                isAuthenticated &&
+                                                isAuthenticated && !tipsClosed &&
                                                 !oddsViolateMinimumForMarket(market.type, option.odds) &&
                                                 (!pickBlocked || isSelected)
                                                   ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
@@ -1506,7 +1527,7 @@ export function BetsBoard({
                                     key={option.id}
                                     type="button"
                                     disabled={
-                                      !isAuthenticated ||
+                                      !isAuthenticated || tipsClosed ||
                                       oddsViolateMinimumForMarket(market.type, option.odds) ||
                                       (pickBlocked && !isSelected)
                                     }
@@ -1524,7 +1545,7 @@ export function BetsBoard({
                                     className={`rounded-md border p-2 text-left ${
                                       isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
                                     } ${
-                                      isAuthenticated &&
+                                      isAuthenticated && !tipsClosed &&
                                       !oddsViolateMinimumForMarket(market.type, option.odds) &&
                                       (!pickBlocked || isSelected)
                                         ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
@@ -1597,7 +1618,7 @@ export function BetsBoard({
                                             <button
                                               type="button"
                                               disabled={
-                                                !isAuthenticated ||
+                                                !isAuthenticated || tipsClosed ||
                                                 oddsViolateMinimumForMarket(market.type, option.odds) ||
                                                 (pickBlocked && !isSelected)
                                               }
@@ -1620,7 +1641,7 @@ export function BetsBoard({
                                               className={`w-full min-h-[3rem] rounded-md border px-2 py-1.5 text-left ${
                                                 isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
                                               } ${
-                                                isAuthenticated &&
+                                                isAuthenticated && !tipsClosed &&
                                                 !oddsViolateMinimumForMarket(market.type, option.odds) &&
                                                 (!pickBlocked || isSelected)
                                                   ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"
@@ -1669,7 +1690,7 @@ export function BetsBoard({
                               <button
                                 type="button"
                                 disabled={
-                                  !isAuthenticated ||
+                                  !isAuthenticated || tipsClosed ||
                                   oddsViolateMinimumForMarket(market.type, option.odds) ||
                                   (pickBlocked && !isSelected)
                                 }
@@ -1687,7 +1708,7 @@ export function BetsBoard({
                                 className={`w-full rounded-md border p-2 text-left ${
                                   isSelected ? "border-blue-600 bg-blue-50" : "border-zinc-200 bg-white"
                                 } ${
-                                  isAuthenticated &&
+                                  isAuthenticated && !tipsClosed &&
                                   !oddsViolateMinimumForMarket(market.type, option.odds) &&
                                   (!pickBlocked || isSelected)
                                     ? "cursor-pointer hover:border-blue-400 hover:bg-blue-50/70"

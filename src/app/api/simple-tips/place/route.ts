@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { exactScoreOutcomeForPrediction } from "@/lib/exact-score";
 import { MIN_BETTABLE_ODDS, oddsViolateMinimumForMarket } from "@/lib/min-bettable-odds";
+import { isMatchOpenForBetting, MATCH_TIPS_CLOSED_MESSAGE } from "@/lib/match-betting";
 import { placeSimpleTipSchema } from "@/lib/validation";
 
 const DEFAULT_MATCH_BET_BUDGET = 100;
@@ -25,6 +26,9 @@ export async function POST(request: Request) {
   const match = await db.match.findUnique({ where: { id: matchId } });
   if (!match || !match.isPublished || match.settledAt) {
     return NextResponse.json({ error: "Spiel ist nicht verfügbar." }, { status: 400 });
+  }
+  if (!isMatchOpenForBetting(match)) {
+    return NextResponse.json({ error: MATCH_TIPS_CLOSED_MESSAGE }, { status: 400 });
   }
 
   const oneXTwoStake = match.isKnockout ? 140 : 80;

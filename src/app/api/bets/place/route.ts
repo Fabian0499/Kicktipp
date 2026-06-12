@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { profiBetConflictsOpenSet } from "@/lib/betting-conflicts";
 import { profiMarketCategoryKey } from "@/lib/profi-market-category";
 import { MIN_BETTABLE_ODDS, oddsViolateMinimumForMarket } from "@/lib/min-bettable-odds";
+import { isMatchOpenForBetting, MATCH_TIPS_CLOSED_MESSAGE } from "@/lib/match-betting";
 import { placeBetSchema } from "@/lib/validation";
 
 const DEFAULT_MATCH_BET_BUDGET = 100;
@@ -67,6 +68,9 @@ export async function POST(request: Request) {
 
     if (!option.market.match.isPublished) {
       return NextResponse.json({ error: "Mindestens ein Spiel ist nicht verfügbar." }, { status: 400 });
+    }
+    if (!isMatchOpenForBetting(option.market.match)) {
+      return NextResponse.json({ error: MATCH_TIPS_CLOSED_MESSAGE }, { status: 400 });
     }
     if (oddsViolateMinimumForMarket(option.market.type, option.odds)) {
       return NextResponse.json(

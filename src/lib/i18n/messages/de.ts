@@ -180,6 +180,7 @@ export const de = {
     statusVoid: "Ungültig",
     stake: "Einsatz",
     kickoff: "Anstoß",
+    tipsClosed: "Das Spiel hat bereits begonnen – keine neuen Tipps mehr möglich.",
     marketSimple1x2: "Einfach-Tipp (1X2)",
     marketSimpleExact: "Einfach-Tipp (Exact Score)",
     marketCombi: "Kombi ({market})",

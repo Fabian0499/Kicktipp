@@ -174,6 +174,7 @@ export const en = {
     statusVoid: "Void",
     stake: "Stake",
     kickoff: "Kick-off",
+    tipsClosed: "This match has already started – no new tips can be placed.",
     marketSimple1x2: "Simple tip (1X2)",
     marketSimpleExact: "Simple tip (exact score)",
     marketCombi: "Combo ({market})",
