@@ -8,6 +8,7 @@ import { payoutFromGrossReturn } from "@/lib/bet-payout";
 import {
   isQualifyMethodOutcome,
   qualifyMarketUsesMethodMatrix,
+  resolveKnockoutQualifyingTeamIsHome,
   winningQualifyMethodOutcomes,
   type KnockoutDecidedBy,
 } from "@/lib/to-qualify-method";
@@ -30,11 +31,14 @@ type SettlementBet = {
 export type MatchSettlementInput = {
   homeHalfTimeScore: number;
   awayHalfTimeScore: number;
+  /** Ergebnis nach 90 Minuten – gilt für alle Standard-Märkte (1X2, Tore, …) */
   homeScore: number;
   awayScore: number;
   totalCards: number;
   totalCorners: number;
   knockoutDecidedBy?: KnockoutDecidedBy;
+  homeScoreAfterExtraTime?: number;
+  awayScoreAfterExtraTime?: number;
   knockoutAdvancingIsHome?: boolean;
 };
 
@@ -125,17 +129,19 @@ export function evaluateBetOutcome(params: {
   if (bet.marketType === MarketType.TO_QUALIFY) {
     const legacyOutcome = bet.outcomeLabel === "1" || bet.outcomeLabel === "2";
     const methodOutcome = isQualifyMethodOutcome(bet.outcomeLabel);
+    const qualifyingIsHome = resolveKnockoutQualifyingTeamIsHome(input);
+
     if (usesQualifyMethodMatrix) {
       const isQualifyVoid =
-        (legacyOutcome && homeScore === awayScore) ||
+        (legacyOutcome && qualifyingIsHome === undefined) ||
         (methodOutcome && input.knockoutDecidedBy === "REGULATION");
       if (legacyOutcome) {
         return {
           isQualifyVoid,
           won:
             !isQualifyVoid &&
-            ((homeScore > awayScore && bet.outcomeLabel === "1") ||
-              (homeScore < awayScore && bet.outcomeLabel === "2")),
+            ((qualifyingIsHome === true && bet.outcomeLabel === "1") ||
+              (qualifyingIsHome === false && bet.outcomeLabel === "2")),
         };
       }
       if (methodOutcome) {
@@ -146,13 +152,13 @@ export function evaluateBetOutcome(params: {
       }
       return { isQualifyVoid: false, won: false };
     }
-    const isQualifyVoid = homeScore === awayScore;
+    const isQualifyVoid = qualifyingIsHome === undefined;
     return {
       isQualifyVoid,
       won:
         !isQualifyVoid &&
-        ((homeScore > awayScore && bet.outcomeLabel === "1") ||
-          (homeScore < awayScore && bet.outcomeLabel === "2")),
+        ((qualifyingIsHome === true && bet.outcomeLabel === "1") ||
+          (qualifyingIsHome === false && bet.outcomeLabel === "2")),
     };
   }
 
@@ -267,8 +273,8 @@ export async function applyMatchSettlement(
     match.isKnockout && usesQualifyMethodMatrix && input.knockoutDecidedBy
       ? winningQualifyMethodOutcomes(
           input.knockoutDecidedBy,
-          input.homeScore,
-          input.awayScore,
+          input.homeScoreAfterExtraTime,
+          input.awayScoreAfterExtraTime,
           input.knockoutAdvancingIsHome,
         )
       : [];
@@ -280,6 +286,10 @@ export async function applyMatchSettlement(
       awayHalfTimeScore: input.awayHalfTimeScore,
       homeScore: input.homeScore,
       awayScore: input.awayScore,
+      homeScoreAfterExtraTime: input.homeScoreAfterExtraTime ?? null,
+      awayScoreAfterExtraTime: input.awayScoreAfterExtraTime ?? null,
+      knockoutDecidedBy: input.knockoutDecidedBy ?? null,
+      knockoutAdvancingIsHome: input.knockoutAdvancingIsHome ?? null,
       totalCards: input.totalCards,
       totalCorners: input.totalCorners,
       settledAt: new Date(),
@@ -339,10 +349,20 @@ export function validateKnockoutSettlement(params: {
   homeScore: number;
   awayScore: number;
   knockoutDecidedBy?: KnockoutDecidedBy;
+  homeScoreAfterExtraTime?: number;
+  awayScoreAfterExtraTime?: number;
   knockoutAdvancingIsHome?: boolean;
 }): string | null {
-  const { isKnockout, usesQualifyMethodMatrix, homeScore, awayScore, knockoutDecidedBy, knockoutAdvancingIsHome } =
-    params;
+  const {
+    isKnockout,
+    usesQualifyMethodMatrix,
+    homeScore,
+    awayScore,
+    knockoutDecidedBy,
+    homeScoreAfterExtraTime,
+    awayScoreAfterExtraTime,
+    knockoutAdvancingIsHome,
+  } = params;
 
   if (!isKnockout || !usesQualifyMethodMatrix) {
     return null;
@@ -350,15 +370,27 @@ export function validateKnockoutSettlement(params: {
   if (!knockoutDecidedBy) {
     return "Bei diesem K.-o.-Spiel ist die Auswahl zur Entscheidung (Regulärzeit / Verlängerung / Elfmeterschießen) erforderlich.";
   }
-  if (knockoutDecidedBy === "REGULATION" && homeScore === awayScore) {
-    return "Bei Unentschieden kann die Entscheidung nicht „Reguläre Spielzeit“ sein.";
+  if (knockoutDecidedBy === "REGULATION") {
+    if (homeScore === awayScore) {
+      return "Bei Unentschieden nach 90 Minuten kann die Entscheidung nicht „Reguläre Spielzeit“ sein.";
+    }
+    return null;
   }
-  if (knockoutDecidedBy === "EXTRA_TIME" && homeScore === awayScore) {
-    return "Bei Unentschieden im Endstand kann die Entscheidung nicht „Verlängerung“ sein.";
+  if (knockoutDecidedBy === "EXTRA_TIME") {
+    if (homeScore !== awayScore) {
+      return "Bei einem Sieger nach 90 Minuten wähle „Reguläre Spielzeit“, nicht Verlängerung.";
+    }
+    if (homeScoreAfterExtraTime === undefined || awayScoreAfterExtraTime === undefined) {
+      return "Bitte den Endstand nach Verlängerung angeben.";
+    }
+    if (homeScoreAfterExtraTime === awayScoreAfterExtraTime) {
+      return "Nach Verlängerung muss ein Sieger feststehen (kein Unentschieden).";
+    }
+    return null;
   }
   if (knockoutDecidedBy === "PENALTIES") {
     if (homeScore !== awayScore) {
-      return "Elfmeterschießen ist nur bei unentschiedenem Endstand wählbar.";
+      return "Elfmeterschießen ist nur bei Unentschieden nach 90 Minuten wählbar.";
     }
     if (knockoutAdvancingIsHome === undefined) {
       return "Bitte angeben, welche Mannschaft nach dem Elfmeterschießen weiterkommt.";

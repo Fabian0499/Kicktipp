@@ -359,7 +359,10 @@ export const settleMatchSchema = z.object({
   totalCorners: z.coerce.number().int().min(0).max(50),
   /** Nur bei KO mit Markt „Methode des Sieges“ (4 Optionen): wie fiel die Entscheidung? */
   knockoutDecidedBy: z.enum(["REGULATION", "EXTRA_TIME", "PENALTIES"]).optional(),
-  /** Bei unentschiedenem Endstand: welche Mannschaft ist weiter (nur für Elfmeterschießen nötig)? */
+  /** Endstand nach Verlängerung (nur wenn knockoutDecidedBy = EXTRA_TIME) */
+  homeScoreAfterExtraTime: z.coerce.number().int().min(0).max(30).optional(),
+  awayScoreAfterExtraTime: z.coerce.number().int().min(0).max(30).optional(),
+  /** Bei unentschiedenem Endstand nach 90 Min.: welche Mannschaft ist weiter (Elfmeterschießen)? */
   knockoutAdvancingIsHome: z.boolean().optional(),
 });
 

@@ -16,6 +16,10 @@ type MatchItem = {
   awayHalfTimeScore: number | null;
   homeScore: number | null;
   awayScore: number | null;
+  homeScoreAfterExtraTime: number | null;
+  awayScoreAfterExtraTime: number | null;
+  knockoutDecidedBy: "" | "REGULATION" | "EXTRA_TIME" | "PENALTIES";
+  knockoutAdvancingIsHome: boolean | null;
   settledAt: string | null;
   totalCards: number | null;
   totalCorners: number | null;

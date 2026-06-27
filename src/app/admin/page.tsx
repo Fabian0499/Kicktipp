@@ -106,10 +106,13 @@ export default async function AdminPage() {
               (match as unknown as { homeHalfTimeScore?: number | null }).homeHalfTimeScore ?? null,
             awayHalfTimeScore:
               (match as unknown as { awayHalfTimeScore?: number | null }).awayHalfTimeScore ?? null,
-            homeScore: (match as unknown as { homeScore?: number | null }).homeScore ?? null,
-            awayScore: (match as unknown as { awayScore?: number | null }).awayScore ?? null,
-            settledAt:
-              (match as unknown as { settledAt?: Date | null }).settledAt?.toISOString() ?? null,
+            homeScore: match.homeScore,
+            awayScore: match.awayScore,
+            homeScoreAfterExtraTime: match.homeScoreAfterExtraTime,
+            awayScoreAfterExtraTime: match.awayScoreAfterExtraTime,
+            knockoutDecidedBy: match.knockoutDecidedBy ?? "",
+            knockoutAdvancingIsHome: match.knockoutAdvancingIsHome,
+            settledAt: match.settledAt?.toISOString() ?? null,
             totalCards: (match as unknown as { totalCards?: number | null }).totalCards ?? null,
             totalCorners: (match as unknown as { totalCorners?: number | null }).totalCorners ?? null,
           };

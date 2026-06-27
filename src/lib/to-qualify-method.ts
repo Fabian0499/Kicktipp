@@ -32,30 +32,79 @@ export function qualifyMarketUsesMethodMatrix(options: { outcome: string }[]): b
 /**
  * Gewinner-Outcomes für den 4-Felder-Markt (nur eine Zeile kann zutreffen).
  * REGULATION: keine der vier Auswahlen gewinnt → leeres Array (Tipps werden void).
+ * EXTRA_TIME: Endstand nach Verlängerung (getrennt vom 90-Minuten-Ergebnis).
  */
 export function winningQualifyMethodOutcomes(
   decidedBy: KnockoutDecidedBy,
-  homeScore: number,
-  awayScore: number,
+  homeScoreAfterExtraTime: number | undefined,
+  awayScoreAfterExtraTime: number | undefined,
   advancingIsHomeWhenTied: boolean | undefined,
 ): string[] {
   if (decidedBy === "REGULATION") {
     return [];
   }
 
-  const fromScore =
-    homeScore > awayScore ? true : homeScore < awayScore ? false : undefined;
-
   if (decidedBy === "EXTRA_TIME") {
-    if (fromScore === undefined) {
+    if (homeScoreAfterExtraTime === undefined || awayScoreAfterExtraTime === undefined) {
       return [];
     }
-    return fromScore ? [QUALIFY_OUTCOME_ET_HOME] : [QUALIFY_OUTCOME_ET_AWAY];
+    if (homeScoreAfterExtraTime === awayScoreAfterExtraTime) {
+      return [];
+    }
+    return homeScoreAfterExtraTime > awayScoreAfterExtraTime
+      ? [QUALIFY_OUTCOME_ET_HOME]
+      : [QUALIFY_OUTCOME_ET_AWAY];
   }
 
-  const homeWins =
-    fromScore !== undefined ? fromScore : Boolean(advancingIsHomeWhenTied);
-  return homeWins ? [QUALIFY_OUTCOME_PEN_HOME] : [QUALIFY_OUTCOME_PEN_AWAY];
+  if (advancingIsHomeWhenTied === undefined) {
+    return [];
+  }
+  return advancingIsHomeWhenTied ? [QUALIFY_OUTCOME_PEN_HOME] : [QUALIFY_OUTCOME_PEN_AWAY];
+}
+
+/** Wer qualifiziert sich (für Legacy-Tipps „1“ / „2“)? */
+export function resolveKnockoutQualifyingTeamIsHome(params: {
+  homeScore: number;
+  awayScore: number;
+  knockoutDecidedBy?: KnockoutDecidedBy;
+  homeScoreAfterExtraTime?: number;
+  awayScoreAfterExtraTime?: number;
+  knockoutAdvancingIsHome?: boolean;
+}): boolean | undefined {
+  const {
+    homeScore,
+    awayScore,
+    knockoutDecidedBy,
+    homeScoreAfterExtraTime,
+    awayScoreAfterExtraTime,
+    knockoutAdvancingIsHome,
+  } = params;
+
+  if (homeScore > awayScore) {
+    return true;
+  }
+  if (homeScore < awayScore) {
+    return false;
+  }
+
+  if (knockoutDecidedBy === "EXTRA_TIME") {
+    if (homeScoreAfterExtraTime === undefined || awayScoreAfterExtraTime === undefined) {
+      return undefined;
+    }
+    if (homeScoreAfterExtraTime > awayScoreAfterExtraTime) {
+      return true;
+    }
+    if (homeScoreAfterExtraTime < awayScoreAfterExtraTime) {
+      return false;
+    }
+    return undefined;
+  }
+
+  if (knockoutDecidedBy === "PENALTIES") {
+    return knockoutAdvancingIsHome;
+  }
+
+  return undefined;
 }
 
 export function formatToQualifyOutcomeDisplay(

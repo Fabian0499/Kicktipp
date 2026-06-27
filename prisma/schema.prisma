@@ -55,6 +55,12 @@ enum BetStatus {
   VOID
 }
 
+enum KnockoutDecidedBy {
+  REGULATION
+  EXTRA_TIME
+  PENALTIES
+}
+
 model User {
   id                  String               @id @default(cuid())
   email               String               @unique
@@ -121,6 +127,13 @@ model Match {
   awayHalfTimeScore Int?
   homeScore   Int?
   awayScore   Int?
+  /** Endstand nach Verlängerung (nur K.-o., wenn Entscheidung in der Verlängerung fiel) */
+  homeScoreAfterExtraTime Int?
+  awayScoreAfterExtraTime Int?
+  /** Wie die K.-o.-Partie entschieden wurde (für „Methode des Sieges“) */
+  knockoutDecidedBy KnockoutDecidedBy?
+  /** Nach Elfmeterschießen weiter (nur wenn knockoutDecidedBy = PENALTIES) */
+  knockoutAdvancingIsHome Boolean?
   /** Summe Karten (z. B. Gelb = 1, Rot = 2) bei Auswertung – für Karten-Markt */
   totalCards  Int?
   /** Erste Schwelle N der Karten-Matrix – nur bei Neuanlage */

@@ -36,6 +36,8 @@ function buildSettlementInput(parsed: {
   totalCards: number;
   totalCorners: number;
   knockoutDecidedBy?: KnockoutDecidedBy;
+  homeScoreAfterExtraTime?: number;
+  awayScoreAfterExtraTime?: number;
   knockoutAdvancingIsHome?: boolean;
 }): MatchSettlementInput {
   return {
@@ -46,6 +48,8 @@ function buildSettlementInput(parsed: {
     totalCards: parsed.totalCards,
     totalCorners: parsed.totalCorners,
     knockoutDecidedBy: parsed.knockoutDecidedBy,
+    homeScoreAfterExtraTime: parsed.homeScoreAfterExtraTime,
+    awayScoreAfterExtraTime: parsed.awayScoreAfterExtraTime,
     knockoutAdvancingIsHome: parsed.knockoutAdvancingIsHome,
   };
 }
@@ -92,6 +96,8 @@ export async function POST(request: Request, context: { params: Promise<{ matchI
       homeScore: parsed.data.homeScore,
       awayScore: parsed.data.awayScore,
       knockoutDecidedBy: parsed.data.knockoutDecidedBy,
+      homeScoreAfterExtraTime: parsed.data.homeScoreAfterExtraTime,
+      awayScoreAfterExtraTime: parsed.data.awayScoreAfterExtraTime,
       knockoutAdvancingIsHome: parsed.data.knockoutAdvancingIsHome,
     });
     if (knockoutError) {
@@ -148,6 +154,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ match
       homeScore: parsed.data.homeScore,
       awayScore: parsed.data.awayScore,
       knockoutDecidedBy: parsed.data.knockoutDecidedBy,
+      homeScoreAfterExtraTime: parsed.data.homeScoreAfterExtraTime,
+      awayScoreAfterExtraTime: parsed.data.awayScoreAfterExtraTime,
       knockoutAdvancingIsHome: parsed.data.knockoutAdvancingIsHome,
     });
     if (knockoutError) {

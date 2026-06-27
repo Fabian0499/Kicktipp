@@ -13,6 +13,10 @@ type MatchItem = {
   awayHalfTimeScore: number | null;
   homeScore: number | null;
   awayScore: number | null;
+  homeScoreAfterExtraTime: number | null;
+  awayScoreAfterExtraTime: number | null;
+  knockoutDecidedBy: "" | "REGULATION" | "EXTRA_TIME" | "PENALTIES";
+  knockoutAdvancingIsHome: boolean | null;
   settledAt: string | null;
   totalCards: number | null;
   totalCorners: number | null;
@@ -23,6 +27,8 @@ type ScoreFormState = {
   awayHalfTimeScore: string;
   homeScore: string;
   awayScore: string;
+  homeScoreAfterExtraTime: string;
+  awayScoreAfterExtraTime: string;
   totalCards: string;
   totalCorners: string;
   knockoutDecidedBy: "" | "REGULATION" | "EXTRA_TIME" | "PENALTIES";
@@ -34,6 +40,8 @@ const emptyScore = (): ScoreFormState => ({
   awayHalfTimeScore: "",
   homeScore: "",
   awayScore: "",
+  homeScoreAfterExtraTime: "",
+  awayScoreAfterExtraTime: "",
   totalCards: "",
   totalCorners: "",
   knockoutDecidedBy: "",
@@ -46,11 +54,24 @@ function scoreFromMatch(match: MatchItem): ScoreFormState {
     awayHalfTimeScore: match.awayHalfTimeScore != null ? String(match.awayHalfTimeScore) : "",
     homeScore: match.homeScore != null ? String(match.homeScore) : "",
     awayScore: match.awayScore != null ? String(match.awayScore) : "",
+    homeScoreAfterExtraTime:
+      match.homeScoreAfterExtraTime != null ? String(match.homeScoreAfterExtraTime) : "",
+    awayScoreAfterExtraTime:
+      match.awayScoreAfterExtraTime != null ? String(match.awayScoreAfterExtraTime) : "",
     totalCards: match.totalCards != null ? String(match.totalCards) : "",
     totalCorners: match.totalCorners != null ? String(match.totalCorners) : "",
-    knockoutDecidedBy: "",
-    knockoutAdvancingIsHome: "",
+    knockoutDecidedBy: match.knockoutDecidedBy ?? "",
+    knockoutAdvancingIsHome:
+      match.knockoutAdvancingIsHome === true
+        ? "home"
+        : match.knockoutAdvancingIsHome === false
+          ? "away"
+          : "",
   };
+}
+
+function fullTimeScoreLabel(match: MatchItem): string {
+  return match.isKnockout && match.usesQualifyMethodMatrix ? "Endstand nach 90 Min." : "Endstand";
 }
 
 export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
@@ -69,6 +90,14 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
     const awayHalfTimeScore = Number(scoreEntry.awayHalfTimeScore);
     const homeScore = Number(scoreEntry.homeScore);
     const awayScore = Number(scoreEntry.awayScore);
+    const homeScoreAfterExtraTime =
+      scoreEntry.homeScoreAfterExtraTime.trim() === ""
+        ? undefined
+        : Number(scoreEntry.homeScoreAfterExtraTime);
+    const awayScoreAfterExtraTime =
+      scoreEntry.awayScoreAfterExtraTime.trim() === ""
+        ? undefined
+        : Number(scoreEntry.awayScoreAfterExtraTime);
     const totalCards = Number(scoreEntry.totalCards);
     const totalCorners = Number(scoreEntry.totalCorners);
 
@@ -99,9 +128,33 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
         setMessage("");
         return;
       }
+      if (scoreEntry.knockoutDecidedBy === "EXTRA_TIME") {
+        if (
+          homeScoreAfterExtraTime === undefined ||
+          awayScoreAfterExtraTime === undefined ||
+          !Number.isInteger(homeScoreAfterExtraTime) ||
+          !Number.isInteger(awayScoreAfterExtraTime) ||
+          homeScoreAfterExtraTime < 0 ||
+          awayScoreAfterExtraTime < 0
+        ) {
+          setError("Bitte den Endstand nach Verlängerung eingeben.");
+          setMessage("");
+          return;
+        }
+        if (homeScoreAfterExtraTime === awayScoreAfterExtraTime) {
+          setError("Nach Verlängerung muss ein Sieger feststehen.");
+          setMessage("");
+          return;
+        }
+        if (homeScore !== awayScore) {
+          setError("Bei Sieg nach 90 Minuten wähle „Reguläre Spielzeit“, nicht Verlängerung.");
+          setMessage("");
+          return;
+        }
+      }
       if (scoreEntry.knockoutDecidedBy === "PENALTIES") {
         if (homeScore !== awayScore) {
-          setError("Elfmeterschießen ist nur bei unentschiedenem Endstand wählbar.");
+          setError("Elfmeterschießen ist nur bei Unentschieden nach 90 Minuten wählbar.");
           setMessage("");
           return;
         }
@@ -128,6 +181,10 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
 
     if (match.isKnockout && match.usesQualifyMethodMatrix && scoreEntry.knockoutDecidedBy) {
       payload.knockoutDecidedBy = scoreEntry.knockoutDecidedBy;
+      if (scoreEntry.knockoutDecidedBy === "EXTRA_TIME") {
+        payload.homeScoreAfterExtraTime = homeScoreAfterExtraTime;
+        payload.awayScoreAfterExtraTime = awayScoreAfterExtraTime;
+      }
       if (scoreEntry.knockoutDecidedBy === "PENALTIES" && homeScore === awayScore) {
         payload.knockoutAdvancingIsHome = scoreEntry.knockoutAdvancingIsHome === "home";
       }
@@ -239,7 +296,7 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-700">Endstand</label>
+                        <label className="block text-xs font-semibold text-zinc-700">{fullTimeScoreLabel(match)}</label>
                         <div className="mt-1 flex items-end gap-2">
                           <div>
                             <label className="block text-xs text-zinc-600">{match.homeTeam}</label>
@@ -328,9 +385,9 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                       <div className="w-full max-w-xl rounded-md border border-violet-200 bg-violet-50/80 p-3 text-sm">
                         <p className="font-semibold text-violet-950">Methode des Sieges (K.-o.)</p>
                         <p className="mt-1 text-xs text-violet-900">
-                          Wähle, wie die Partie entschieden wurde. Die vier Tipps „Verlängerung / Elfmeter“ gewinnen nur,
-                          wenn die Entscheidung dort fiel; bei Sieg in der regulären Zeit werden diese Tipps nicht
-                          gewertet (void).
+                          Das Ergebnis nach 90 Minuten gilt für alle Standard-Tipps (1X2, Tore, …). Bei
+                          Verlängerung oder Elfmeterschießen zusätzlich die Entscheidung angeben. Die vier Tipps
+                          „Verlängerung / Elfmeter“ gewinnen nur, wenn die Entscheidung dort fiel.
                         </p>
                         <label className="mt-2 block text-xs font-semibold text-violet-950">Entscheidung</label>
                         <select
@@ -343,6 +400,10 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                                 knockoutDecidedBy: event.target.value as ScoreFormState["knockoutDecidedBy"],
                                 knockoutAdvancingIsHome:
                                   event.target.value === "PENALTIES" ? score.knockoutAdvancingIsHome : "",
+                                homeScoreAfterExtraTime:
+                                  event.target.value === "EXTRA_TIME" ? score.homeScoreAfterExtraTime : "",
+                                awayScoreAfterExtraTime:
+                                  event.target.value === "EXTRA_TIME" ? score.awayScoreAfterExtraTime : "",
                               },
                             }))
                           }
@@ -353,6 +414,52 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                           <option value="EXTRA_TIME">Verlängerung</option>
                           <option value="PENALTIES">Elfmeterschießen</option>
                         </select>
+                        {score.knockoutDecidedBy === "EXTRA_TIME" ? (
+                          <div className="mt-3">
+                            <label className="block text-xs font-semibold text-violet-950">
+                              Endstand nach Verlängerung
+                            </label>
+                            <div className="mt-1 flex items-end gap-2">
+                              <div>
+                                <label className="block text-xs text-violet-900">{match.homeTeam}</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={score.homeScoreAfterExtraTime}
+                                  onChange={(event) =>
+                                    setScores((current) => ({
+                                      ...current,
+                                      [match.id]: {
+                                        ...score,
+                                        homeScoreAfterExtraTime: event.target.value,
+                                      },
+                                    }))
+                                  }
+                                  className="w-20 rounded-md border border-violet-300 bg-white px-2 py-1"
+                                />
+                              </div>
+                              <span className="pb-2 font-semibold">:</span>
+                              <div>
+                                <label className="block text-xs text-violet-900">{match.awayTeam}</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={score.awayScoreAfterExtraTime}
+                                  onChange={(event) =>
+                                    setScores((current) => ({
+                                      ...current,
+                                      [match.id]: {
+                                        ...score,
+                                        awayScoreAfterExtraTime: event.target.value,
+                                      },
+                                    }))
+                                  }
+                                  className="w-20 rounded-md border border-violet-300 bg-white px-2 py-1"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
                         {score.knockoutDecidedBy === "PENALTIES" ? (
                           <fieldset className="mt-3">
                             <legend className="text-xs font-semibold text-violet-950">
@@ -430,8 +537,21 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                 </p>
                 <p className="text-sm text-zinc-600">Anstoß: {new Date(match.startsAt).toLocaleString("de-DE")}</p>
                 <p className="mt-2 text-sm font-medium text-emerald-800">
-                  Aktuell – Halbzeit: {match.homeHalfTimeScore} : {match.awayHalfTimeScore}, Endstand: {match.homeScore}{" "}
-                  : {match.awayScore}
+                  Aktuell – Halbzeit: {match.homeHalfTimeScore} : {match.awayHalfTimeScore}, Endstand
+                  {match.isKnockout && match.usesQualifyMethodMatrix ? " (90 Min.)" : ""}: {match.homeScore} :{" "}
+                  {match.awayScore}
+                  {match.homeScoreAfterExtraTime != null && match.awayScoreAfterExtraTime != null
+                    ? `, nach Verlängerung: ${match.homeScoreAfterExtraTime} : ${match.awayScoreAfterExtraTime}`
+                    : null}
+                  {match.knockoutDecidedBy
+                    ? `, Entscheidung: ${
+                        match.knockoutDecidedBy === "REGULATION"
+                          ? "Reguläre Zeit"
+                          : match.knockoutDecidedBy === "EXTRA_TIME"
+                            ? "Verlängerung"
+                            : "Elfmeter"
+                      }`
+                    : null}
                   {match.totalCards != null ? `, Kort: ${match.totalCards}` : null}
                   {match.totalCorners != null ? `, Hjornespark: ${match.totalCorners}` : null}
                 </p>
@@ -478,7 +598,7 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-zinc-700">Endstand</label>
+                        <label className="block text-xs font-semibold text-zinc-700">{fullTimeScoreLabel(match)}</label>
                         <div className="mt-1 flex items-end gap-2">
                           <input
                             type="number"
@@ -541,6 +661,10 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                                 knockoutDecidedBy: e.target.value as ScoreFormState["knockoutDecidedBy"],
                                 knockoutAdvancingIsHome:
                                   e.target.value === "PENALTIES" ? score.knockoutAdvancingIsHome : "",
+                                homeScoreAfterExtraTime:
+                                  e.target.value === "EXTRA_TIME" ? score.homeScoreAfterExtraTime : "",
+                                awayScoreAfterExtraTime:
+                                  e.target.value === "EXTRA_TIME" ? score.awayScoreAfterExtraTime : "",
                               },
                             }))
                           }
@@ -551,6 +675,52 @@ export function AdminResultSettlement({ matches }: { matches: MatchItem[] }) {
                           <option value="EXTRA_TIME">Verlängerung</option>
                           <option value="PENALTIES">Elfmeterschießen</option>
                         </select>
+                        {score.knockoutDecidedBy === "EXTRA_TIME" ? (
+                          <div className="mt-3">
+                            <label className="block text-xs font-semibold text-violet-950">
+                              Endstand nach Verlängerung
+                            </label>
+                            <div className="mt-1 flex items-end gap-2">
+                              <div>
+                                <label className="block text-xs text-violet-900">{match.homeTeam}</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={score.homeScoreAfterExtraTime}
+                                  onChange={(event) =>
+                                    setScores((current) => ({
+                                      ...current,
+                                      [match.id]: {
+                                        ...score,
+                                        homeScoreAfterExtraTime: event.target.value,
+                                      },
+                                    }))
+                                  }
+                                  className="w-20 rounded-md border border-violet-300 bg-white px-2 py-1"
+                                />
+                              </div>
+                              <span className="pb-2 font-semibold">:</span>
+                              <div>
+                                <label className="block text-xs text-violet-900">{match.awayTeam}</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={score.awayScoreAfterExtraTime}
+                                  onChange={(event) =>
+                                    setScores((current) => ({
+                                      ...current,
+                                      [match.id]: {
+                                        ...score,
+                                        awayScoreAfterExtraTime: event.target.value,
+                                      },
+                                    }))
+                                  }
+                                  className="w-20 rounded-md border border-violet-300 bg-white px-2 py-1"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : null}
                         {score.knockoutDecidedBy === "PENALTIES" ? (
                           <fieldset className="mt-3">
                             <legend className="text-xs font-semibold text-violet-950">Nach Elfmeter weiter</legend>
